@@ -1,30 +1,39 @@
 # wiz
 A versioned and signed database for large files
 
+# status
+- [x] Created format specification
+- [ ] Implement specification in go
+- [ ] Create a command line application to open, inspect, repair, unpack and modify a wiz database
+- [ ] Implement shared library for android, using go
+- [ ] Implement a cross platform GUI (e.g. JavaFX) for the command line application
+
+# TOC
 * [wiz](#wiz)
+* [status](#status)
 * [Format specification](#format-specification)
- * [Nodes in general](#nodes-in-general)
- * [Header node](#header-node)
- * [Configuration node](#configuration-node)
- * [Boundary node](#boundary-node)
- * [Free node](#free-node)
- * [Reverse node](#reverse-node)
- * [Blob node](#blob-node)
- * [Data node](#data-node)
- * [Merkle data node](#merkle-data-node)
- * [Stream node](#stream-node)
- * [Commit node](#commit-node)
- * [Directory Node](#directory-node)
- * [Directory Node: Entry Node - File](#directory-node--entry-node---file)
-  * [Directory Node: Entry Node - Directory](#directory-node--entry-node---directory)
-  * [Directory Node: Entry Node - Overflow](#directory-node--entry-node---overflow)
- * [HIS-Node](#his-node)
-  * [HT-Node](#ht-node)
-  * [HO-Node](#ho-node)
- * [CR-Node](#cr-node)
-  * [CL-Node](#cl-node)
- * [Encryption](#encryption)
-  * [0x01: AES-256 CTR](#0x01--aes-256-ctr)
+  * [Nodes in general](#nodes-in-general)
+  * [Header node](#header-node)
+  * [Configuration node](#configuration-node)
+  * [Boundary node](#boundary-node)
+  * [Free node](#free-node)
+  * [Reverse node](#reverse-node)
+  * [Blob node](#blob-node)
+  * [Data node](#data-node)
+  * [Merkle data node](#merkle-data-node)
+  * [Stream node](#stream-node)
+  * [Commit node](#commit-node)
+  * [Directory Node](#directory-node)
+    * [Directory Node: Entry Node - File](#directory-node-entry-node---file)
+    * [Directory Node: Entry Node - Directory](#directory-node-entry-node---directory)
+    * [Directory Node: Entry Node - Overflow](#directory-node-entry-node---overflow)
+  * [HIS-Node](#his-node)
+    * [HT-Node](#ht-node)
+   * [HO-Node](#ho-node)
+  * [CR-Node](#cr-node)
+    * [CL-Node](#cl-node)
+  * [Encryption](#encryption)
+    * [0x01: AES-256 CTR](#0x01-aes-256-ctr)
 
 # Format specification
 Basically wiz is just a specification of different nodes. In general a node should be kept so small, that the executing environment can process nodes in memory entirely (take also compression into account, especially after decompression), however it is up to the writer to decide which is best in the intended use case.
