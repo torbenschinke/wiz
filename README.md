@@ -1,30 +1,30 @@
 # wiz
 A versioned and signed database for large files
 
-- [wiz](#wiz)
-- [Format specification](#format-specification)
-* [Nodes in general](#nodes-in-general)
-* [Header node](#header-node)
-* [Configuration node](#configuration-node)
-* [Boundary node](#boundary-node)
-* [Free node](#free-node)
-* [Reverse node](#reverse-node)
-* [Blob node](#blob-node)
-* [Data node](#data-node)
-* [Merkle data node](#merkle-data-node)
-* [Stream node](#stream-node)
-* [Commit node](#commit-node)
-* [Directory Node](#directory-node)
-+ [Directory Node: Entry Node - File](#directory-node--entry-node---file)
-+ [Directory Node: Entry Node - Directory](#directory-node--entry-node---directory)
-+ [Directory Node: Entry Node - Overflow](#directory-node--entry-node---overflow)
-* [HIS-Node](#his-node)
-+ [HT-Node](#ht-node)
-+ [HO-Node](#ho-node)
-* [CR-Node](#cr-node)
-+ [CL-Node](#cl-node)
-* [Encryption](#encryption)
-+ [0x01: AES-256 CTR](#0x01--aes-256-ctr)
+* [wiz](#wiz)
+* [Format specification](#format-specification)
+ * [Nodes in general](#nodes-in-general)
+ * [Header node](#header-node)
+ * [Configuration node](#configuration-node)
+ * [Boundary node](#boundary-node)
+ * [Free node](#free-node)
+ * [Reverse node](#reverse-node)
+ * [Blob node](#blob-node)
+ * [Data node](#data-node)
+ * [Merkle data node](#merkle-data-node)
+ * [Stream node](#stream-node)
+ * [Commit node](#commit-node)
+ * [Directory Node](#directory-node)
+ * [Directory Node: Entry Node - File](#directory-node--entry-node---file)
+  * [Directory Node: Entry Node - Directory](#directory-node--entry-node---directory)
+  * [Directory Node: Entry Node - Overflow](#directory-node--entry-node---overflow)
+ * [HIS-Node](#his-node)
+  * [HT-Node](#ht-node)
+  * [HO-Node](#ho-node)
+ * [CR-Node](#cr-node)
+  * [CL-Node](#cl-node)
+ * [Encryption](#encryption)
+  * [0x01: AES-256 CTR](#0x01--aes-256-ctr)
 
 # Format specification
 Basically wiz is just a specification of different nodes. In general a node should be kept so small, that the executing environment can process nodes in memory entirely (take also compression into account, especially after decompression), however it is up to the writer to decide which is best in the intended use case.
@@ -38,11 +38,11 @@ Marks a container and must be always the first node of a file and should not occ
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x00         1 byte      byte
-magic             [77 69 7a 63]    4 byte      [4]byte
-sub format magic    [* * * *]      4 byte      [4]byte
-version               0x03         4 byte      uint32
-encryption             *           1 byte      byte
+node type                  0x00         1 byte      byte
+magic                  [77 69 7a 63]    4 byte      [4]byte
+sub format magic         [* * * *]      4 byte      [4]byte
+version                    0x03         4 byte      uint32
+encryption                  *           1 byte      byte
 
 ```
 The version indicates which nodes and how they are defined. A node format may be changed in future revisions but should be extended in a backwards compatible manner. If such a thing is not possible (e.g. by adding new kinds of nodes) the number increases.
@@ -69,12 +69,12 @@ The wiz repository (as defined by the file) may include different properties. Th
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x01         1 byte      byte
-config version        0x00         4 byte      uint32
-hash algorithm        0x*          1 byte      byte
-pack id                *           4 byte      uint32
-length of key           *           1 byte      byte (e.g. for AES-256 this is 32)
-encryption key          *           # bytes     []byte
+node type                  0x01         1 byte      byte
+config version             0x00         4 byte      uint32
+hash algorithm             0x*          1 byte      byte
+pack id                     *           4 byte      uint32
+length of key               *           1 byte      byte (e.g. for AES-256 this is 32)
+encryption key              *           # bytes     []byte
 
 ```
 The pack id cannot use the most significant bit, as it already indicates (in an 8bit pointer) if it is a local pointer offset or an external offset, so the maximum id is 2^31 = 2.147.483.648. In such references cases, cross pack pointers cannot be located beyond 4.294.967.296 byte. This allows to use pointers (not related to hash addressed nodes) to address 8 EiB (2^31*2^32) of storage.
@@ -92,8 +92,8 @@ The writer is allowed to insert boundary nodes at will. Readers can use this to 
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x02         1 byte      byte
-hash algorithm     the boundary    1 byte      [31]byte
+node type                  0x02         1 byte      byte
+hash algorithm          the boundary    1 byte      [31]byte
 
 ```
 
@@ -109,9 +109,9 @@ Marks a free area. This may have been inserted after a delete operation or for p
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x03         1 byte      byte
-# free bytes            *          1-10 byte    varuint
-free bytes             *           # byte      []byte
+node type                  0x03         1 byte      byte
+# free bytes                *          1-10 byte    varuint
+free bytes                  *           # byte      []byte
 ```
 
 
@@ -121,8 +121,8 @@ Nodes cannot be read backwards, because their header comes before data which is 
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x04         1 byte      byte
-offset bytes            *           4 byte      uint32
+node type                  0x04         1 byte      byte
+offset bytes                *           4 byte      uint32
 ```
 
 To read backwards, you have to read the last 1 + 4 bytes first. It must be of the form [0x04 * * * *]. Then seek back offset bytes + 5 bytes to start reading the previous node as always, starting at the node type identifier.
@@ -136,10 +136,10 @@ A blob node just contains payload bytes and has not a specific structure.
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x05         1 byte      byte
-compression             *           1 byte      byte
-# data bytes             *          1-10 byte    varuint
-data bytes              *           # bytes     []byte
+node type                  0x05         1 byte      byte
+compression                 *           1 byte      byte
+# data bytes                *          1-10 byte    varuint
+data bytes                  *           # bytes     []byte
 ```
 **adress = hash(0x05, uncompressed(data-bytes), length(uncompressed(bytes))**
 
@@ -156,9 +156,9 @@ A data node defines a list of 64 bit node pointers referring to either other dat
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x06         1 byte      byte
-# of pointers            *          1-10 byte    varuint
-64bit pointer bytes        *          # * 8 byte   []int64
+node type                  0x06         1 byte      byte
+# of pointers               *          1-10 byte    varuint
+64bit pointer bytes         *          # * 8 byte   []int64
 ```
 **address = hash(0x06, #pointers, pointers...)**
 
@@ -168,9 +168,9 @@ It is like the simple data node (0x06) but referring to hashes instead of pointe
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x07         1 byte      byte
-# of hashes              *          1-10 byte    varuint
-hashes                *         # * 32 byte   [][32]byte
+node type                  0x07         1 byte      byte
+# of hashes                 *          1-10 byte    varuint
+hashes                      *         # * 32 byte   [][32]byte
 ```
 **address = hash(0x07,#hashes, hashes...)**
 
@@ -180,10 +180,10 @@ When storing an actual stream of data, it's content is always represented by a r
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x08         1 byte      byte
-stream length            *          1-10 byte    varuint
-stream hash             *           32 byte     [32]byte
-offset                *           8 byte      int64
+node type                  0x08         1 byte      byte
+stream length               *          1-10 byte    varuint
+stream hash                 *           32 byte     [32]byte
+offset                      *           8 byte      int64
 ```
 **address = hash(0x08, length, hash)**
 
@@ -195,13 +195,13 @@ Note that depending on the chosen data and stream nodes are not hashed directly 
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x09         1 byte      byte
-timestamp              *           8 byte      int64
-message               *           * byte      UTF8
-# of parents             *           2 byte      uint16
-hashes                *          # * 32byte   [][32]byte
-# of trees               *           2 byte      uint16
-(name | hash)            *           # * byte    [](UTF8|[32]byte)
+node type                  0x09         1 byte      byte
+timestamp                   *           8 byte      int64
+message                     *           * byte      UTF8
+# of parents                *           2 byte      uint16
+hashes                      *          # * 32byte   [][32]byte
+# of trees                  *           2 byte      uint16
+(name | hash)               *           # * byte    [](UTF8|[32]byte)
 ```
 **address = hash(0x09, timestamp, message, #parents, hashes, #trees, name|hashes...)**
 
@@ -218,10 +218,10 @@ A directory node is a structured way of representing a logical (user defined) hi
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x10         1 byte      byte
-children hash           *           32 byte     [32]byte
-# entries              *           1-10byte    uvarint
-entries               *            *byte      []directory entry
+node type                  0x10         1 byte      byte
+children hash               *           32 byte     [32]byte
+# entries                   *           1-10byte    uvarint
+entries                     *            *byte      []directory entry
 
 ```
 **children hash = hash(sort(key)|entire entry-node|...)**  whereas only payload entry nodes and not overflow nodes (which do not have keys anyway) are considered
@@ -236,10 +236,10 @@ A simple flat file entry node without any meta data.
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-entry type            0x11         1 byte      byte
-# key bytes             *          1-10 byte    varuint
-key                 *           * byte      []byte
-stream hash            *           32 byte     [32]byte
+entry type                  0x11         1 byte      byte
+# key bytes                  *          1-10 byte    varuint
+key                          *           * byte      []byte
+stream hash                  *           32 byte     [32]byte
 ```
 
 ### Directory Node: Entry Node - Directory
@@ -248,10 +248,10 @@ A simple directory entry node without any meta data.
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-entry type            0x12         1 byte      byte
-# key bytes             *          1-10 byte    varuint
-key                 *           * byte      []byte
-directory hash          *           32 byte     [32]byte
+entry type                  0x12         1 byte      byte
+# key bytes                  *          1-10 byte    varuint
+key                          *           * byte      []byte
+directory hash               *           32 byte     [32]byte
 ```
 
 ### Directory Node: Entry Node - Overflow
@@ -260,8 +260,8 @@ An overflow node refers to an offset pointer of another directory node (0x10) an
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-entry type            0x13         1 byte      byte
-directory pointer          *           8 byte      int64
+entry type                  0x13         1 byte      byte
+directory pointer            *           8 byte      int64
 ```
 
 ## HIS-Node
@@ -270,8 +270,8 @@ The hash-index-super-node is located either in the third node (after the header 
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x14         1 byte      byte
-pointer               *           8 byte      int64
+node type                  0x14         1 byte      byte
+pointer                     *           8 byte      int64
 ```
 
 ### HT-Node
@@ -280,9 +280,9 @@ A hash-tree-node can be located anywhere, however for better locality the writer
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-node type             0x15         1 byte      byte
-# entries              *           1-10byte    uvarint
-entries               *            *byte      []mixed array of HO- or HT-Node
+node type                  0x15         1 byte      byte
+# entries                   *           1-10byte    uvarint
+entries                     *            *byte      []mixed array of HO- or HT-Node
 ```
 
 ### HO-Node
@@ -291,9 +291,9 @@ A simple hash-offset node contains the hash value and it's pointer location. It 
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-entry type            0x16         1 byte      byte
-node hash             *           32 byte     [32]byte
-pointer               *           8 byte      int64
+entry type                 0x16         1 byte      byte
+node hash                   *           32 byte     [32]byte
+pointer                     *           8 byte      int64
 
 ```
 
@@ -303,9 +303,9 @@ The content root node contains information which commits are the latest, regardi
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-entry type            0x17         1 byte      byte
-# entries              *           1-10byte    uvarint
-entries               *           * byte     []mixed array of CR- or CL-Node
+entry type                 0x17         1 byte      byte
+# entries                   *           1-10byte    uvarint
+entries                     *           * byte      []mixed array of CR- or CL-Node
 
 ```
 
@@ -315,9 +315,9 @@ The content leaf node describes the name or key of a commit and it's hash.
 ```
 name                value        length         type
 ---------------------|---------------|-----------|----------------
-entry type            0x18         1 byte      byte
-# key length            *           1-10byte    uvarint
-commit hash            *           32 byte     [32]byte
+entry type                 0x18         1 byte      byte
+# key length                *           1-10byte    uvarint
+commit hash                 *           32 byte     [32]byte
 ```
 
 ## Encryption
