@@ -7,6 +7,7 @@ import (
 
 type DataIn interface {
 	ReadUInt32LE() uint32
+	ReadUInt32BE() uint32
 	ReadByte() byte
 	Read(buf []byte) (int, error)
 	Error() error
@@ -37,6 +38,19 @@ func (r *DataInReader) ReadUInt32LE() uint32 {
 		return 0
 	}
 	return binary.LittleEndian.Uint32(r.tmp4)
+}
+
+func (r *DataInReader) ReadUInt32BE() uint32 {
+	if r.lastErr != nil {
+		return 0
+	}
+	n, err := r.delegate.Read(r.tmp4)
+	if err != nil {
+		r.lastErr = err
+		r.readLastErr = n
+		return 0
+	}
+	return binary.BigEndian.Uint32(r.tmp4)
 }
 
 func (r *DataInReader) ReadByte() byte {

@@ -28,7 +28,7 @@ func (h Header) Read(in io.DataIn) error {
 	h.Type = NodeType(in.ReadByte())
 	in.Read(h.Magic[:])
 	in.Read(h.SubMagic[:])
-	h.Version = in.ReadUInt32LE()
+	h.Version = in.ReadUInt32BE()
 	h.Encryption = Encryption(in.ReadByte())
 	return in.Error()
 }
