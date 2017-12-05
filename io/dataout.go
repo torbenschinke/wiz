@@ -11,13 +11,13 @@ type DataOut interface {
 }
 
 type DataOutWriter struct {
-	delegate    io.Writer
-	tmp1        []byte
-	tmp2        []byte
-	tmp4        []byte
-	tmp8        []byte
-	lastErr     error
-	readLastErr int
+	delegate     io.Writer
+	tmp1         []byte
+	tmp2         []byte
+	tmp4         []byte
+	tmp8         []byte
+	lastErr      error
+	writeLastErr int
 }
 
 func (w *DataOutWriter) WriteUInt32LE(val uint32) {
@@ -37,8 +37,15 @@ func (w *DataOutWriter) WriteByte(val byte) {
 }
 
 func (w *DataOutWriter) Write(buf []byte) (int, error) {
-	if w.lastErr != nil{
-		return w.
+	if w.lastErr != nil {
+		return w.writeLastErr, w.lastErr
+	} else {
+		i, e := w.delegate.Write(buf)
+		if e != nil {
+			w.lastErr = e
+			w.writeLastErr = i
+		}
+		return i, e
 	}
 }
 
