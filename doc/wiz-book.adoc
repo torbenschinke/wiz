@@ -4,11 +4,14 @@ Torben Schinke
 v1.0, 2017-12-05
 :doctype: book
 :source-highlighter: rouge
+:toc:
+:toc-placement: preambe
 
 [dedication]
 Dedication
 ----------
 For the family.
+
 
 
 [preface]
@@ -61,6 +64,88 @@ network byte order. As a side note, even if most operating systems are
 little endian today, one cannot ignore BE systems, so any code must be 
 endian independent anyway. It is not expected that wiz may profit from a 
 system specific endianess, like ZFS does.
+
+Magic node
+~~~~~~~~~~
+Marks a container and must be always the first node of a file and should not 
+occur once again. If it does (e.g. for recovery purposes), it is not allowed 
+to be contradictory. Wiz containers can simply be identified using the magic 
+bytes '[0x00 0x77 0x69 0x7a 0x63]'.
+
+
+.on-disk format of the magic node
+[width="100%",options="header"]
+|==============================================
+| Offset| Size | Type | Name | Value | Description
+| 0x00 |1 |uint8 | node type | 0x00 | type 'header'
+| 0x01 |4 |[]uint8 | magic | [77 69 7a 63] | the magic header value
+| 0x05 |4 |[]uint8 | sub magic | [* * * *] | the user defined sub magic header value
+| 0x09 |4 |uint32 | version | 0x03 | this is the third version of the wiz format
+| 0x13 |1 |uint8 | encryption type | * | the kind of encryption algorithm
+|==============================================
+
+
+The 'version' indicates which nodes and how they are defined. 
+A node format may be changed in future revisions but should be 
+extended in a backwards compatible manner. If such a thing is not 
+possible (e.g. also by adding new kinds) the number increases. Because
+the format depends on the node kind (and therefore the sizes to parse)
+an outdated reader can actually only use it's recovery options to continue
+reading.
+
+
+_Some notes to the version flag: Actually this is the third generation of the 
+wiz format. The first only existed on paper, the second was implemented largely 
+based on the paper based specification but is proprietary. So this is the first 
+which is now open source. It is not only implemented in a different language but 
+also does a lot of things differently to improve performance, storage usage, 
+reliability and system complexity._
+
+The known sub format identifiers of all known publicly available sub format 
+identifiers.
+
+.sub format identifiers
+[width="100%",options="header"]
+|==============================================
+|Value | Description
+|[77 69 7a 61] | 'wiza' the standard archive format of the command line tool
+|[77 69 7a 62]| 'wizb' the format of the backup tool
+|==============================================
+
+The encryption formats are defined as follows:
+
+.encryption format identifiers
+[width="100%",options="header"]
+|==============================================
+|Value | Description
+|0x00|no encryption, all nodes are written as they are, just in plain bytes
+|0x01|AES-256 CTR mode
+|==============================================
+
+
+See the encryption chapter for the detailed specification of each encryption mode.
+
+Configuration node
+~~~~~~~~~~~~~~~~~~
+The wiz repository (as defined by the file) may include different properties. 
+These properties are important to open the repository properly, e.g. picking 
+the correct hash algorithm. Also it may contain persistent optional settings for 
+tweaking. This node must always be located at file offset 0x1000. 
+
+.on-disk format of the configuration node
+[width="100%",options="header"]
+|==============================================
+| Offset| Size | Type | Name | Value | Description
+| 0x00 |1 |uint8 | node type | 0x01 | type 'configuration'
+| 0x01 |*|kvobj| key value|*|key value properties in kvobj format
+|==============================================
+
+TBD define kvobj format
+
+Transaction node ring buffer
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 
 Chapters can contain sub-sections nested up to three deep.
 footnote:[An example footnote.]
