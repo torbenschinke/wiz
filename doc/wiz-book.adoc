@@ -49,6 +49,7 @@ Format specification
 Wiz is both, an implementation and a specification.
 In this chapter only the specification matters and is described 
 in a way that it can be implemented in any language or ecosystem.
+Just like ZFS, it addresses it's content using 128bit pointers.
 
 A node always starts with a byte identifier and is otherwise undefined. 
 Most lengths uses a varuint so that it has an adaptive overhead which 
@@ -64,6 +65,22 @@ network byte order. As a side note, even if most operating systems are
 little endian today, one cannot ignore BE systems, so any code must be 
 endian independent anyway. It is not expected that wiz may profit from a 
 system specific endianess, like ZFS does.
+
+In the following, offsets are always defined in hexadecimal values prefixed by
+0x. The size of the types is in bytes. In general everything is little endian (TBD).
+There is no expectation that a machine specific endianess gives any performance
+advantage, since it must be written in an independent way anyway.
+
+.specification of types
+[width="100%",options="header"]
+|==============================================
+| Size | Type |  Description
+| 1-9 |varuint |  unsigned, as defined in <<varint>>
+| 1-9 |varint |  signed, as defined in <<varint>>
+| 8 |vdev id| arbritary array of bytes, must be unique for a vdev set
+| 16 |ndptr |  a node pointer is a 128 bit address, where the first 8 byte determine the vdev (or file) and the last 8 byte determine the physical offset in the vdev.
+|1-*|utf8| UTF-8 sequences are encoded with a prefix of the type 'varuint' followed by an arbritary amount of bytes
+|==============================================
 
 Magic node
 ~~~~~~~~~~
@@ -130,7 +147,8 @@ Configuration node
 The wiz repository (as defined by the file) may include different properties. 
 These properties are important to open the repository properly, e.g. picking 
 the correct hash algorithm. Also it may contain persistent optional settings for 
-tweaking. This node must always be located at file offset 0x1000. 
+tweaking. This node must always be located at file offset 0x1000. It is not intended
+to be modified on a regular basis.
 
 .on-disk format of the configuration node
 [width="100%",options="header"]
@@ -140,12 +158,52 @@ tweaking. This node must always be located at file offset 0x1000.
 | 0x01 |*|kvobj| key value|*|key value properties in kvobj format
 |==============================================
 
-TBD define kvobj format
+TBD define kvobj format (xdr like zfs?), better keep that small and put it into
+it's own kvobj-node? (same as for nosql data nodes?)
 
-Transaction node ring buffer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Super node
+~~~~~~~~~~
+The super node is a ring buffer having 128 <<a:transaction-node,transaction entries>> which
+are written in a round-robin manner. The transaction node with the highest transaction
+id and a valid checksum is the transaction node to use. If something went wrong,
+older transactions may be used for recovery, but the usefulness depends on the kind
+of damage. Usually one would expect that if the transaction is written to the
+ring buffer and the underlying file system crashes, it hopefully will loose the
+data in the same order (the transaction node is always the last thing written), 
+however there is no guarantee on that. Also fsync cannot protect us from that, 
+because it is broken on many filesystems, even by design (see also <<btrfs-fsync>>).
+Today, I don't know how to solve that properly. 
 
+The super node is always located at file offset 0x2000 (TBD) and is defined
+as follows.
 
+.on-disk format of the super node
+[width="100%",options="header"]
+|==============================================
+| Offset| Size | Type | Name | Value | Description
+| 0x00 |1 |uint8 | node type | 0x02 | type 'super'
+| 0x01 |128 * ?|[]tx-node| array|*|ring buffer of 128 transaction nodes
+|==============================================
+
+[[a:transaction-node]]
+Transaction node
+~~~~~~~~~~~~~~~~
+The transaction node is the entry point which defines an applied transaction
+and all references to nodes which describe the valid state of the storage. This
+includes references to the root nodes for snapshots (equivalent to tags and branches)
+and also to additional trees, holding information about reference counts and deleted
+nodes. The 'transaction id' is found in all other written nodes (TBD) to easily
+identify which modifications belong a specific transaction (TBD, does not make sense
+when overwriting! snapshots). The id is strict monotonic increasing.
+
+.on-disk format of the transaction node
+[width="100%",options="header"]
+|==============================================
+| Offset| Size | Type | Name | Value | Description
+| 0x00 |1 |uint8 | node type | 0x03 | type 'transaction'
+| 0x01 |8|uint64| transaction id|*|increasing number
+| 0x09 |8|ndptr|
+|==============================================
 
 Chapters can contain sub-sections nested up to three deep.
 footnote:[An example footnote.]
@@ -238,6 +296,8 @@ The bibliography list is a style of AsciiDoc bulleted list.
   'DocBook - The Definitive Guide'. O'Reilly & Associates. 1999.
   ISBN 1-56592-580-7.
 - [[[zfs-spec]]] http://www.giis.co.in/Zfs_ondiskformat.pdf
+- [[[btrfs-fsync]]] https://btrfs.wiki.kernel.org/index.php/FAQ#Does_Btrfs_have_data.3Dordered_mode_like_Ext3.3F
+- [[[varint]]] https://developers.google.com/protocol-buffers/docs/encoding
 
 [bibliography]
 .Articles

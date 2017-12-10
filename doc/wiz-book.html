@@ -442,6 +442,9 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_format_specification">Format specification</a>
 <ul class="sectlevel2">
 <li><a href="#_magic_node">Magic node</a></li>
+<li><a href="#_configuration_node">Configuration node</a></li>
+<li><a href="#_super_node">Super node</a></li>
+<li><a href="#a:transaction-node">Transaction node</a></li>
 <li><a href="#X1">Sub-section with Anchor</a></li>
 </ul>
 </li>
@@ -505,7 +508,8 @@ high quality products.</p>
 <div class="paragraph">
 <p>Wiz is both, an implementation and a specification.
 In this chapter only the specification matters and is described
-in a way that it can be implemented in any language or ecosystem.</p>
+in a way that it can be implemented in any language or ecosystem.
+Just like ZFS, it addresses it&#8217;s content using 128bit pointers.</p>
 </div>
 <div class="paragraph">
 <p>A node always starts with a byte identifier and is otherwise undefined.
@@ -523,16 +527,64 @@ little endian today, one cannot ignore BE systems, so any code must be
 endian independent anyway. It is not expected that wiz may profit from a
 system specific endianess, like ZFS does.</p>
 </div>
+<div class="paragraph">
+<p>In the following, offsets are always defined in hexadecimal values prefixed by
+0x. The size of the types is in bytes. In general everything is little endian (TBD).
+There is no expectation that a machine specific endianess gives any performance
+advantage, since it must be written in an independent way anyway.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 1. specification of types</caption>
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Size</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1-9</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">varuint</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">unsigned, as defined in <a href="#varint">[varint]</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1-9</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">varint</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">signed, as defined in <a href="#varint">[varint]</a></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">vdev id</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">arbritary array of bytes, must be unique for a vdev set</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ndptr</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">a node pointer is a 128 bit address, where the first 8 byte determine the vdev (or file) and the last 8 byte determine the physical offset in the vdev.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1-*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">utf8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">UTF-8 sequences are encoded with a prefix of the type <em>varuint</em> followed by an arbritary amount of bytes</p></td>
+</tr>
+</tbody>
+</table>
 <div class="sect2">
 <h3 id="_magic_node">Magic node</h3>
 <div class="paragraph">
 <p>Marks a container and must be always the first node of a file and should not
 occur once again. If it does (e.g. for recovery purposes), it is not allowed
 to be contradictory. Wiz containers can simply be identified using the magic
-bytes [0x00 0x77 0x69 0x7a 0x63].</p>
+bytes <em>[0x00 0x77 0x69 0x7a 0x63]</em>.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 1. on-disk format of the magic node</caption>
+<caption class="title">Table 2. on-disk format of the magic node</caption>
 <colgroup>
 <col style="width: 16.6666%;">
 <col style="width: 16.6666%;">
@@ -558,20 +610,20 @@ bytes [0x00 0x77 0x69 0x7a 0x63].</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">uint8</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">node type</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x00</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">the node type</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">type <em>header</em></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"> 4</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"> []uint8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">[]uint8</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">magic</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">[77 69 7a 63]</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">the magic header value</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x05</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"> 4</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"> []uint8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">[]uint8</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">sub magic</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">[* * * *]</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">the user defined sub magic header value</p></td>
@@ -595,14 +647,240 @@ bytes [0x00 0x77 0x69 0x7a 0x63].</p>
 </tbody>
 </table>
 <div class="paragraph">
-<p>| Name      | Value         | Length | Type    |
-| --------- | :-----------: | -----: | ------: |
-| node type | 0x00          | 1 byte | byte    |
-| magic     | [77 69 7a 63] | 4 byte | [4]byte |</p>
+<p>The <em>version</em> indicates which nodes and how they are defined.
+A node format may be changed in future revisions but should be
+extended in a backwards compatible manner. If such a thing is not
+possible (e.g. also by adding new kinds) the number increases. Because
+the format depends on the node kind (and therefore the sizes to parse)
+an outdated reader can actually only use it&#8217;s recovery options to continue
+reading.</p>
 </div>
 <div class="paragraph">
-<p>The version indicates which nodes and how they are defined. A node format may be changed in future revisions but should be extended in a backwards compatible manner. If such a thing is not possible (e.g. by adding new kinds of nodes) the number increases.</p>
+<p><em>Some notes to the version flag: Actually this is the third generation of the
+wiz format. The first only existed on paper, the second was implemented largely
+based on the paper based specification but is proprietary. So this is the first
+which is now open source. It is not only implemented in a different language but
+also does a lot of things differently to improve performance, storage usage,
+reliability and system complexity.</em></p>
 </div>
+<div class="paragraph">
+<p>The known sub format identifiers of all known publicly available sub format
+identifiers.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 3. sub format identifiers</caption>
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Value</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">[77 69 7a 61]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>wiza</em> the standard archive format of the command line tool</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">[77 69 7a 62]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><em>wizb</em> the format of the backup tool</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>The encryption formats are defined as follows:</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 4. encryption format identifiers</caption>
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Value</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x00</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">no encryption, all nodes are written as they are, just in plain bytes</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">AES-256 CTR mode</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>See the encryption chapter for the detailed specification of each encryption mode.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_configuration_node">Configuration node</h3>
+<div class="paragraph">
+<p>The wiz repository (as defined by the file) may include different properties.
+These properties are important to open the repository properly, e.g. picking
+the correct hash algorithm. Also it may contain persistent optional settings for
+tweaking. This node must always be located at file offset 0x1000. It is not intended
+to be modified on a regular basis.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 5. on-disk format of the configuration node</caption>
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Offset</th>
+<th class="tableblock halign-left valign-top">Size</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Value</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x00</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">uint8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">node type</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">type <em>configuration</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">kvobj</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">key value</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">key value properties in kvobj format</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>TBD define kvobj format (xdr like zfs?), better keep that small and put it into
+it&#8217;s own kvobj-node? (same as for nosql data nodes?)</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_super_node">Super node</h3>
+<div class="paragraph">
+<p>The super node is a ring buffer having 128 <a href="#a:transaction-node">transaction entries</a> which
+are written in a round-robin manner. The transaction node with the highest transaction
+id and a valid checksum is the transaction node to use. If something went wrong,
+older transactions may be used for recovery, but the usefulness depends on the kind
+of damage. Usually one would expect that if the transaction is written to the
+ring buffer and the underlying file system crashes, it hopefully will loose the
+data in the same order (the transaction node is always the last thing written),
+however there is no guarantee on that. Also fsync cannot protect us from that,
+because it is broken on many filesystems, even by design (see also <a href="#btrfs-fsync">[btrfs-fsync]</a>).
+Today, I don&#8217;t know how to solve that properly.</p>
+</div>
+<div class="paragraph">
+<p>The super node is always located at file offset 0x2000 (TBD) and is defined
+as follows.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 6. on-disk format of the super node</caption>
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Offset</th>
+<th class="tableblock halign-left valign-top">Size</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Value</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x00</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">uint8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">node type</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x02</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">type <em>super</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">128 * ?</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">[]tx-node</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">array</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ring buffer of 128 transaction nodes</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="a:transaction-node">Transaction node</h3>
+<div class="paragraph">
+<p>The transaction node is the entry point which defines an applied transaction
+and all references to nodes which describe the valid state of the storage. This
+includes references to the root nodes for snapshots (equivalent to tags and branches)
+and also to additional trees, holding information about reference counts and deleted
+nodes. The <em>transaction id</em> is found in all other written nodes (TBD) to easily
+identify which modifications belong a specific transaction (TBD, does not make sense
+when overwriting! snapshots). The id is strict monotonic increasing.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 7. on-disk format of the transaction node</caption>
+<colgroup>
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.6666%;">
+<col style="width: 16.667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Offset</th>
+<th class="tableblock halign-left valign-top">Size</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-left valign-top">Value</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x00</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">uint8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">node type</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x03</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">type <em>transaction</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">uint64</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">transaction id</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">increasing number</p></td>
+</tr>
+</tbody>
+</table>
 <div class="paragraph">
 <p>Chapters can contain sub-sections nested up to three deep.
 <sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnote_1" title="View footnote.">1</a>]</sup>
@@ -634,7 +912,7 @@ example inline image followed by an example block image:</p>
 <p>Followed by an example table:</p>
 </div>
 <table class="tableblock frame-all grid-all" style="width: 60%;">
-<caption class="title">Table 2. An example table</caption>
+<caption class="title">Table 8. An example table</caption>
 <colgroup>
 <col style="width: 50%;">
 <col style="width: 50%;">
@@ -745,6 +1023,12 @@ ISBN 1-56592-580-7.</p>
 <li>
 <p><a id="zfs-spec"></a>[zfs-spec] <a href="http://www.giis.co.in/Zfs_ondiskformat.pdf" class="bare">http://www.giis.co.in/Zfs_ondiskformat.pdf</a></p>
 </li>
+<li>
+<p><a id="btrfs-fsync"></a>[btrfs-fsync] <a href="https://btrfs.wiki.kernel.org/index.php/FAQ#Does_Btrfs_have_data.3Dordered_mode_like_Ext3.3F" class="bare">https://btrfs.wiki.kernel.org/index.php/FAQ#Does_Btrfs_have_data.3Dordered_mode_like_Ext3.3F</a></p>
+</li>
+<li>
+<p><a id="varint"></a>[varint] <a href="https://developers.google.com/protocol-buffers/docs/encoding" class="bare">https://developers.google.com/protocol-buffers/docs/encoding</a></p>
+</li>
 </ul>
 </div>
 <div class="ulist bibliography">
@@ -805,7 +1089,7 @@ of AsciiDoc labeled lists.</p>
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2017-12-10 12:23:11 CET
+Last updated 2017-12-10 19:18:37 CET
 </div>
 </div>
 </body>
