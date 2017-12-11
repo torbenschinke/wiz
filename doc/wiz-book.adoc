@@ -48,37 +48,60 @@ Format specification
 --------------------
 Wiz is both, an implementation and a specification.
 In this chapter only the specification matters and is described 
-in a way that it can be implemented in any language or ecosystem.
-Just like ZFS, it addresses it's content using 128bit pointers.
+in a way that it can be implemented in any language and ecosystem.
 
-A node always starts with a byte identifier and is otherwise undefined. 
-Most lengths uses a varuint so that it has an adaptive overhead which 
-increases dynamically as the payload size increases. 
-Overhead also depends on the used compression algorithm, if a node supports 
-that at all. The payload of a node should not exceed something reasonable, 
-e.g. ZFS (see also <<zfs-spec>>) uses 128KiB but you may even go into the range of 
-MiB to increase efficiency. 
-The UTF8 type is always prefixed with a varuint length to 
-increase efficiency for short strings but allowing also more than the 
-typical 64k bytes. All numbers are treated as big endian to match 
-network byte order. As a side note, even if most operating systems are 
-little endian today, one cannot ignore BE systems, so any code must be 
-endian independent anyway. It is not expected that wiz may profit from a 
-system specific endianess, like ZFS does.
+Everything in the world of wiz is represented by a node, which always
+starts with a byte identifier. Besides that, there are no other common
+properties among node types. 
+
+Some nodes support compression for their payload, but it is not a generic
+feature. In contrast to that, encryption is a property of the pageing infrastructure
+itself. I believe that providing unencrypted insight into meta information
+is already an absolute security flaw. Examples for this are stacked filesystems
+like EncFs or eCryptfs, which provides plain information about the folder structure,
+amount of files and the file sizes. Keeping facts about nodes unencrypted and just
+encrypt payload would be the same kind of security flaw.
+
+Pointers to nodes have a variadic size from 2 bytes upto 20 bytes, which boils
+down to a theoretical 128 bit addressing, in which the first 10 bytes refer to
+the id of a virtual device (vdev) and the last 10 bytes to a physical offset. 
+The additonal two bytes are caused by the overhead of the varint encoding. The vdev
+is usually a simple file in your host's filesystem. Using this technique, the
+pointer adapts itself to different use cases, like many small vdevs or
+a single large file. The usage of a varint favors storage costs over
+performance. Addressing millions of nodes, especially in independent vdev sets
+- I think of an online mirror storage - would waste a lot of space. In this
+scenario, one could argue that the performance penalties are also on 
+the client side and will not stress the server at all.
+
+All texts should be encoded in UTF-8, however there is no simple answer for filepaths.
+When taking a look at Git and how it handles filenames, it works perfectly on
+Linux filesystems, which just treat a filename as a byte sequence but fails
+miserably when mixing platforms like MacOS and Windows. Some users expect an
+UTF-8 normalization and others excoriate that. So we also keep that decision to
+a preprocess. Moreover, instead of following the errornous c approach of zero 
+termination, we also use a varint as a length encoding, which has the same
+overhead for most expected strings (up to 127 byte, runes may vary). We define
+a text payload always as UTF-8 (a varint prefixed array of uint8) and undefined
+text payload as a varint prefixed array of uint8.
+
+In general, byte order is the common network order - big endian. Most elements
+are already invariant to endianess, like varint or arrays. There is no expectation
+that a specialization to the host endianess will actually result in any performance
+gain, for an implementation of this specification.
+
 
 In the following, offsets are always defined in hexadecimal values prefixed by
-0x. The size of the types is in bytes. In general everything is little endian (TBD).
-There is no expectation that a machine specific endianess gives any performance
-advantage, since it must be written in an independent way anyway.
+0x.
 
 .specification of types
 [width="100%",options="header"]
 |==============================================
 | Size | Type |  Description
-| 1-9 |varuint |  unsigned, as defined in <<varint>>
-| 1-9 |varint |  signed, as defined in <<varint>>
-| 8 |vdev id| arbritary array of bytes, must be unique for a vdev set
-| 16 |ndptr |  a node pointer is a 128 bit address, where the first 8 byte determine the vdev (or file) and the last 8 byte determine the physical offset in the vdev.
+| 1-10 |varuint |  unsigned, as defined in <<varint>>
+| 1-10 |varint |  signed, as defined in <<varint>>
+| 1-10 |vdev id| varint id, must be unique within a vdev set
+| 2-20 |ndptr |  a node pointer is a double varint 128 bit address, where the first 10 byte determine the vdev id and the last 10 byte determine the physical offset in the vdev.
 |1-*|utf8| UTF-8 sequences are encoded with a prefix of the type 'varuint' followed by an arbritary amount of bytes
 |==============================================
 
