@@ -92,7 +92,7 @@ gain, for an implementation of this specification.
 
 
 In the following, offsets are always defined in hexadecimal values prefixed by
-0x.
+0x. Fixed array values are also declared using hex values, but with 0x omitted.
 
 .specification of types
 [width="100%",options="header"]
@@ -118,10 +118,11 @@ bytes '[0x00 0x77 0x69 0x7a 0x63]'.
 |==============================================
 | Offset| Size | Type | Name | Value | Description
 | 0x00 |1 |uint8 | node type | 0x00 | type 'header'
-| 0x01 |4 |[]uint8 | magic | [77 69 7a 63] | the magic header value
-| 0x05 |4 |[]uint8 | sub magic | [* * * *] | the user defined sub magic header value
-| 0x09 |4 |uint32 | version | 0x03 | this is the third version of the wiz format
-| 0x13 |1 |uint8 | encryption type | * | the kind of encryption algorithm
+| 0x01 |4 |uint32 | version | 0x03 | this is the third version of the wiz format
+| 0x05 |4 |[]uint8 | magic | [77 69 7a 63] | the magic header value
+| 0x06 |1 |uint8 | encryption type | * | the kind of encryption algorithm
+| 0x07 |1 |varuint8 | utf8 length| *| length of the utf8 sequence
+| * |* |utf8 | sub magic | * | the user defined sub magic header value
 |==============================================
 
 
@@ -141,15 +142,22 @@ which is now open source. It is not only implemented in a different language but
 also does a lot of things differently to improve performance, storage usage, 
 reliability and system complexity._
 
-The known sub format identifiers of all known publicly available sub format 
-identifiers.
+One of the basic ideas of wiz is to replace custom 'on disk formats' with
+something better. Today, probably the most widespreaded format is the zip file
+format from pkware. Amongst others, it is used by the entire Microsoft Office
+suite for their '*x files'. To easily identify such subformats, the wiz header
+defines an UTF-8 subformat specifier. In the following table one can see 
+a list of known sub format identifiers. If you create your own identifier,
+use your reversed company or product internet domain, e.g. 'com.mycompany.myproduct'
+to minimize collisions. You may also invent your own file extension, but as a rule 
+of thumb, you should never rely on it and check the magic node instead.
 
-.sub format identifiers
+.known sub format identifiers
 [width="100%",options="header"]
 |==============================================
 |Value | Description
-|[77 69 7a 61] | 'wiza' the standard archive format of the command line tool
-|[77 69 7a 62]| 'wizb' the format of the backup tool
+|0x04 [77 69 7a 61] | 'wiza' the standard archive format of the command line tool
+|0x04 [77 69 7a 62]| 'wizb' the format of the backup tool
 |==============================================
 
 The encryption formats are defined as follows:
