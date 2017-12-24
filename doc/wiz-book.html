@@ -557,7 +557,7 @@ gain, for an implementation of this specification.</p>
 </div>
 <div class="paragraph">
 <p>In the following, offsets are always defined in hexadecimal values prefixed by
-0x.</p>
+0x. Fixed array values are also declared using hex values, but with 0x omitted.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
 <caption class="title">Table 1. specification of types</caption>
@@ -607,7 +607,7 @@ gain, for an implementation of this specification.</p>
 <p>Marks a container and must be always the first node of a file and should not
 occur once again. If it does (e.g. for recovery purposes), it is not allowed
 to be contradictory. Wiz containers can simply be identified using the magic
-bytes <em>[0x00 0x77 0x69 0x7a 0x63]</em>.</p>
+bytes <em>[0x00 0x03 0x77 0x69 0x7a 0x63]</em>.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
 <caption class="title">Table 2. on-disk format of the magic node</caption>
@@ -641,34 +641,42 @@ bytes <em>[0x00 0x77 0x69 0x7a 0x63]</em>.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">[]uint8</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">magic</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">[77 69 7a 63]</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">the magic header value</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x05</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">[]uint8</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">sub magic</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">[* * * *]</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">the user defined sub magic header value</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x09</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">uint32</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">version</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x03</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">this is the third version of the wiz format</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x13</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x05</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">[]uint8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">magic</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">[77 69 7a 63]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the magic header value <em>wizc</em> for the container</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x06</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">uint8</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">encryption type</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">the kind of encryption algorithm</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x07</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">varuint8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">utf8 length</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">length of the utf8 sequence</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">utf8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">sub magic</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the user defined sub magic header value</p></td>
 </tr>
 </tbody>
 </table>
@@ -690,11 +698,18 @@ also does a lot of things differently to improve performance, storage usage,
 reliability and system complexity.</em></p>
 </div>
 <div class="paragraph">
-<p>The known sub format identifiers of all known publicly available sub format
-identifiers.</p>
+<p>One of the basic ideas of wiz is to replace custom <em>on disk formats</em> with
+something better. Today, probably the most widespreaded format is the zip file
+format from pkware. Amongst others, it is used by the entire Microsoft Office
+suite for their <em>*x files</em>. To easily identify such subformats, the wiz header
+defines an UTF-8 subformat specifier. In the following table one can see
+a list of known sub format identifiers. If you create your own identifier,
+use your reversed company or product internet domain, e.g. <em>com.mycompany.myproduct</em>
+to minimize collisions. You may also invent your own file extension, but as a rule
+of thumb, you should never rely on it and check the magic node instead.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 3. sub format identifiers</caption>
+<caption class="title">Table 3. known sub format identifiers</caption>
 <colgroup>
 <col style="width: 50%;">
 <col style="width: 50%;">
@@ -707,11 +722,11 @@ identifiers.</p>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">[77 69 7a 61]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x04 [77 69 7a 61]</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><em>wiza</em> the standard archive format of the command line tool</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">[77 69 7a 62]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x04 [77 69 7a 62]</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><em>wizb</em> the format of the backup tool</p></td>
 </tr>
 </tbody>
@@ -1115,7 +1130,7 @@ of AsciiDoc labeled lists.</p>
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2017-12-11 22:38:50 CET
+Last updated 2017-12-17 22:23:56 CET
 </div>
 </div>
 </body>
