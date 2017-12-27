@@ -10,7 +10,7 @@ v1.0, 2017-12-05
 [dedication]
 Dedication
 ----------
-For the family.
+-
 
 
 
@@ -103,6 +103,45 @@ In the following, offsets are always defined in hexadecimal values prefixed by
 | 1-10 |vdev id| varint id, must be unique within a vdev set
 | 2-20 |ndptr |  a node pointer is a double varint 128 bit address, where the first 10 byte determine the vdev id and the last 10 byte determine the physical offset in the vdev.
 |1-*|utf8| UTF-8 sequences are encoded with a prefix of the type 'varuint' followed by an arbritary amount of bytes
+|2-*|wbo| a wbo serialized object
+|==============================================
+
+[[a:wbo-spec]]
+WBO specification
+~~~~~~~~~~~~~~~~~
+The 'wiz binary object' serialization format is specified by the following 
+BNF like declaration. It is somewhat comparable to the BSON format
+(see <<bson>>) but uses the packed
+varint format from above to improve space efficency. Due to the copy-on-write
+approach, we do not plan to update a distinct data field within a written structure.
+BSON cannot guarantee that either when increasing the length of a string.
+
+.Pseudo BNF, types as uint8 in quotes
+[width="100%"]
+|==============================================
+| object ::= varuint varuint field_list       |a WBO starts with the total object length in bytes (including nested objects), followed by the amount of field entries and the actual field_list
+| field_list ::= field field_list | the recursive definition
+| field_name ::= varuint (uint8*) | a varuint declares the number of (UTF-8) bytes to follow
+| field ::= |
+| "0x00" field_name uint8| byte / uint8
+| "0x01" field_name uint16| uint16
+| "0x02" field_name uint32| uint32
+| "0x03" field_name uint64| uint64
+| "0x04" field_name int8| int8
+| "0x05" field_name int16| int16
+| "0x06" field_name int32| int32
+| "0x07" field_name int64| int64
+| "0x08" field_name float32| float32
+| "0x09" field_name float64| float64
+| "0x0A" field_name complex64| complex64
+| "0x0B" field_name complex128| complex128
+| "0x0C" field_name varuint (uint8*)| a varuint declares the number of UTF-8 bytes to follow
+| "0x0D" field_name varuint (uint8*)| a varuint declares the number of bytes to follow
+| "0x0E" field_name varuint | a variable length unsigned integer in LEB 128 format (1 - 10 bytes)
+| "0x10" field_name varint | a variable length signed integer in LEB 128 format (1 - 10 bytes) with zigzag encoding
+| "0x11" field_name varuint varuint | the vdev id of two variable unsigned length integers 
+| "0x13" field_name varuint type (type content bytes*) | an array with the bytes of the according type to follow. E.g. could be a list of float32 or object.
+| "0x14" field_name object | a field containing another (recursive) object definition
 |==============================================
 
 Magic node
@@ -110,7 +149,7 @@ Magic node
 Marks a container and must be always the first node of a file and should not 
 occur once again. If it does (e.g. for recovery purposes), it is not allowed 
 to be contradictory. Wiz containers can simply be identified using the magic 
-bytes '[0x00 0x03 0x77 0x69 0x7a 0x63]'.
+bytes '[00 03 77 69 7a 63]'.
 
 
 .on-disk format of the magic node
@@ -120,9 +159,10 @@ bytes '[0x00 0x03 0x77 0x69 0x7a 0x63]'.
 | 0x00 |1 |uint8 | node type | 0x00 | type 'header'
 | 0x01 |4 |uint32 | version | 0x03 | this is the third version of the wiz format
 | 0x05 |4 |[]uint8 | magic | [77 69 7a 63] | the magic header value 'wizc' for the container 
-| 0x06 |1 |uint8 | encryption type | * | the kind of encryption algorithm
-| 0x07 |1 |varuint8 | utf8 length| *| length of the utf8 sequence
-| * |* |utf8 | sub magic | * | the user defined sub magic header value
+| 0x06 |1 |uint8 | encryption type | * | the kind of encryption algorithm for the pages
+| 0x07 |* |utf8 | sub magic | * | the user defined sub magic header value as varuint prefixed UTF-8
+| #5    |16 |UUID | wiz file set identifier |* | the UUID of this wiz storage. Any vdev id and therefore ndptr is only valid within the same set of wiz files sharing the same UUID.
+| #6 | 1-10| varuint| vdev id | * | The unique vdev id of this wiz file within the file set. Should start with 0.
 |==============================================
 
 
@@ -173,6 +213,54 @@ The encryption formats are defined as follows:
 
 See the encryption chapter for the detailed specification of each encryption mode.
 
+A wiz storage may consist of multiple files or devices, which have each their own
+magic node but a unique vdev id. Any 'ndptr' contains also that id, so referred nodes
+can be spreaded across vdevs. Use cases for this may be to improve performance, 
+to create append-only / WORM (write once read many) storages or simply to attach
+additional storage volumes. 
+To detect which vdevs belong to the same vdev set, a unique UUID is assigned to 
+each set. You should not rely on a file name to identify a set, if the user
+has access to the files. 
+
+TIP: Choose wisely your trade-of when considering (large) file
+sets, especially when dealing with end users. A common expectation is
+that an application stores a document always in a single file.
+
+It is a hard descision where to write and update the 'super node'. Depending
+on the use case it is either unrealistic (linear growing amount of vdevs) or 
+even impossible (WORM) to update existing vdevs, hence there is no definitive rule
+here. 
+
+CAUTION: Each application has to define where to write or update 
+the 'super node'.
+
+In order to alleviate the situation, there are some well defined use cases.
+If a type matches your use case, apply one of the following rules.
+
+Type 1
+++++++
+For single file formats (ever a single vdev) always update the ringbuffer. 
+
+Type 2
+++++++
+A performance optimized stripe vdev set (like RAID 0) only updates
+the ring buffer in the vdev with the lowest number (typical 0). Stripe sets
+are wobbly anyway. So actually 'Type 1' is only a special case of a stripe set
+with a single vdev.
+
+Type 3
+++++++
+For redundant vdevs (like mirrors / RAID 1 / RAID 5) always update the ringbuffer
+in every vdev.
+
+Type 4
+++++++
+For WORM / append-only formats only write a new super node to the added vdev
+and never change an already written file.
+
+
+
+
 Configuration node
 ~~~~~~~~~~~~~~~~~~
 The wiz repository (as defined by the file) may include different properties. 
@@ -187,47 +275,6 @@ to be modified on a regular basis. It has a reserved maximum size of 128KiB(?).
 | Offset| Size | Type | Name | Value | Description
 | 0x00 |1 |uint8 | node type | 0x01 | type 'configuration'
 | 0x01 |*|wbo| configuration|*|key value properties in <<a:wbo-spec,wbo>> format
-|==============================================
-
-TBD define kvobj format (xdr like zfs?), better keep that small and put it into
-it's own kvobj-node? (same as for nosql data nodes?)
-
-[[a:wbo-spec]]
-WBO specification
-~~~~~~~~~~~~~~~~~
-The 'wiz binary object' serialization format is specified by the following 
-BNF like declaration. It is somewhat comparable to the BSON format
-(see <<bson>>) but uses the packed
-varint format from above to improve space efficency. Due to the copy-on-write
-approach, we do not plan to update a distinct data field within a written structure.
-BSON cannot guarantee that either when increasing the length of a string.
-
-.Pseudo BNF, types as uint8 in quotes
-[width="100%"]
-|==============================================
-| object ::= varuint varuint field_list       |a WBO starts with the total object length in bytes (including nested objects), followed by the amount of field entries and the actual field_list
-| field_list ::= field field_list | the recursive definition
-| field_name ::= varuint (uint8*) | a varuint declares the number of (UTF-8) bytes to follow
-| field ::= |
-| "0x00" field_name uint8| byte / uint8
-| "0x01" field_name uint16| uint16
-| "0x02" field_name uint32| uint32
-| "0x03" field_name uint64| uint64
-| "0x04" field_name int8| int8
-| "0x05" field_name int16| int16
-| "0x06" field_name int32| int32
-| "0x07" field_name int64| int64
-| "0x08" field_name float32| float32
-| "0x09" field_name float64| float64
-| "0x0A" field_name complex64| complex64
-| "0x0B" field_name complex128| complex128
-| "0x0C" field_name varuint (uint8*)| a varuint declares the number of UTF-8 bytes to follow
-| "0x0D" field_name varuint (uint8*)| a varuint declares the number of bytes to follow
-| "0x0E" field_name varuint | a variable length unsigned integer in LEB 128 format (1 - 10 bytes)
-| "0x10" field_name varint | a variable length signed integer in LEB 128 format (1 - 10 bytes) with zigzag encoding
-| "0x11" field_name varuint varuint | the vdev id of two variable unsigned length integers 
-| "0x13" field_name varuint type (type content bytes*) | an array with the bytes of the according type to follow. E.g. could be a list of float32 or object.
-| "0x14" field_name object | a field containing another (recursive) object definition
 |==============================================
 
 

@@ -441,6 +441,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_preface">Preface</a></li>
 <li><a href="#_format_specification">Format specification</a>
 <ul class="sectlevel2">
+<li><a href="#a:wbo-spec">WBO specification</a></li>
 <li><a href="#_magic_node">Magic node</a></li>
 <li><a href="#_configuration_node">Configuration node</a></li>
 <li><a href="#_super_node">Super node</a></li>
@@ -467,7 +468,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h2 id="_dedication">Dedication</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>For the family.</p>
+<p>-</p>
 </div>
 </div>
 </div>
@@ -599,18 +600,135 @@ gain, for an implementation of this specification.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">utf8</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">UTF-8 sequences are encoded with a prefix of the type <em>varuint</em> followed by an arbritary amount of bytes</p></td>
 </tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2-*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">wbo</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">a wbo serialized object</p></td>
+</tr>
 </tbody>
 </table>
+<div class="sect2">
+<h3 id="a:wbo-spec">WBO specification</h3>
+<div class="paragraph">
+<p>The <em>wiz binary object</em> serialization format is specified by the following
+BNF like declaration. It is somewhat comparable to the BSON format
+(see <a href="#bson">[bson]</a>) but uses the packed
+varint format from above to improve space efficency. Due to the copy-on-write
+approach, we do not plan to update a distinct data field within a written structure.
+BSON cannot guarantee that either when increasing the length of a string.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 2. Pseudo BNF, types as uint8 in quotes</caption>
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">object ::= varuint varuint field_list</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">a WBO starts with the total object length in bytes (including nested objects), followed by the amount of field entries and the actual field_list</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">field_list ::= field field_list</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the recursive definition</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">field_name ::= varuint (uint8*)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">a varuint declares the number of (UTF-8) bytes to follow</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">field ::=</p></td>
+<td class="tableblock halign-left valign-top"></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x00" field_name uint8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">byte / uint8</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x01" field_name uint16</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">uint16</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x02" field_name uint32</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">uint32</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x03" field_name uint64</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">uint64</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x04" field_name int8</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int8</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x05" field_name int16</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int16</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x06" field_name int32</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int32</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x07" field_name int64</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">int64</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x08" field_name float32</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">float32</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x09" field_name float64</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">float64</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x0A" field_name complex64</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">complex64</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x0B" field_name complex128</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">complex128</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x0C" field_name varuint (uint8*)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">a varuint declares the number of UTF-8 bytes to follow</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x0D" field_name varuint (uint8*)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">a varuint declares the number of bytes to follow</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x0E" field_name varuint</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">a variable length unsigned integer in LEB 128 format (1 - 10 bytes)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x10" field_name varint</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">a variable length signed integer in LEB 128 format (1 - 10 bytes) with zigzag encoding</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x11" field_name varuint varuint</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the vdev id of two variable unsigned length integers</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x13" field_name varuint type (type content bytes*)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">an array with the bytes of the according type to follow. E.g. could be a list of float32 or object.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">"0x14" field_name object</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">a field containing another (recursive) object definition</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 <div class="sect2">
 <h3 id="_magic_node">Magic node</h3>
 <div class="paragraph">
 <p>Marks a container and must be always the first node of a file and should not
 occur once again. If it does (e.g. for recovery purposes), it is not allowed
 to be contradictory. Wiz containers can simply be identified using the magic
-bytes <em>[0x00 0x03 0x77 0x69 0x7a 0x63]</em>.</p>
+bytes <em>[00 03 77 69 7a 63]</em>.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 2. on-disk format of the magic node</caption>
+<caption class="title">Table 3. on-disk format of the magic node</caption>
 <colgroup>
 <col style="width: 16.6666%;">
 <col style="width: 16.6666%;">
@@ -660,23 +778,31 @@ bytes <em>[0x00 0x03 0x77 0x69 0x7a 0x63]</em>.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">uint8</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">encryption type</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">the kind of encryption algorithm</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the kind of encryption algorithm for the pages</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x07</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">varuint8</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">utf8 length</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">length of the utf8 sequence</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">utf8</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">sub magic</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">the user defined sub magic header value</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the user defined sub magic header value as varuint prefixed UTF-8</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">UUID</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">wiz file set identifier</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the UUID of this wiz storage. Any vdev id and therefore ndptr is only valid within the same set of wiz files sharing the same UUID.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#6</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1-10</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">varuint</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">vdev id</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The unique vdev id of this wiz file within the file set. Should start with 0.</p></td>
 </tr>
 </tbody>
 </table>
@@ -709,7 +835,7 @@ to minimize collisions. You may also invent your own file extension, but as a ru
 of thumb, you should never rely on it and check the magic node instead.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 3. known sub format identifiers</caption>
+<caption class="title">Table 4. known sub format identifiers</caption>
 <colgroup>
 <col style="width: 50%;">
 <col style="width: 50%;">
@@ -735,7 +861,7 @@ of thumb, you should never rely on it and check the magic node instead.</p>
 <p>The encryption formats are defined as follows:</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 4. encryption format identifiers</caption>
+<caption class="title">Table 5. encryption format identifiers</caption>
 <colgroup>
 <col style="width: 50%;">
 <col style="width: 50%;">
@@ -760,6 +886,82 @@ of thumb, you should never rely on it and check the magic node instead.</p>
 <div class="paragraph">
 <p>See the encryption chapter for the detailed specification of each encryption mode.</p>
 </div>
+<div class="paragraph">
+<p>A wiz storage may consist of multiple files or devices, which have each their own
+magic node but a unique vdev id. Any <em>ndptr</em> contains also that id, so referred nodes
+can be spreaded across vdevs. Use cases for this may be to improve performance,
+to create append-only / WORM (write once read many) storages or simply to attach
+additional storage volumes.
+To detect which vdevs belong to the same vdev set, a unique UUID is assigned to
+each set. You should not rely on a file name to identify a set, if the user
+has access to the files.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Tip</div>
+</td>
+<td class="content">
+Choose wisely your trade-of when considering (large) file
+sets, especially when dealing with end users. A common expectation is
+that an application stores a document always in a single file.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>It is a hard descision where to write and update the <em>super node</em>. Depending
+on the use case it is either unrealistic (linear growing amount of vdevs) or
+even impossible (WORM) to update existing vdevs, hence there is no definitive rule
+here.</p>
+</div>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Caution</div>
+</td>
+<td class="content">
+Each application has to define where to write or update
+the <em>super node</em>.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>In order to alleviate the situation, there are some well defined use cases.
+If a type matches your use case, apply one of the following rules.</p>
+</div>
+<div class="sect4">
+<h5 id="_type_1">Type 1</h5>
+<div class="paragraph">
+<p>For single file formats (ever a single vdev) always update the ringbuffer.</p>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_type_2">Type 2</h5>
+<div class="paragraph">
+<p>A performance optimized stripe vdev set (like RAID 0) only updates
+the ring buffer in the vdev with the lowest number (typical 0). Stripe sets
+are wobbly anyway. So actually <em>Type 1</em> is only a special case of a stripe set
+with a single vdev.</p>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_type_3">Type 3</h5>
+<div class="paragraph">
+<p>For redundant vdevs (like mirrors / RAID 1 / RAID 5) always update the ringbuffer
+in every vdev.</p>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_type_4">Type 4</h5>
+<div class="paragraph">
+<p>For WORM / append-only formats only write a new super node to the added vdev
+and never change an already written file.</p>
+</div>
+</div>
 </div>
 <div class="sect2">
 <h3 id="_configuration_node">Configuration node</h3>
@@ -768,10 +970,10 @@ of thumb, you should never rely on it and check the magic node instead.</p>
 These properties are important to open the repository properly, e.g. picking
 the correct hash algorithm. Also it may contain persistent optional settings for
 tweaking. This node must always be located at file offset 0x1000. It is not intended
-to be modified on a regular basis.</p>
+to be modified on a regular basis. It has a reserved maximum size of 128KiB(?).</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 5. on-disk format of the configuration node</caption>
+<caption class="title">Table 6. on-disk format of the configuration node</caption>
 <colgroup>
 <col style="width: 16.6666%;">
 <col style="width: 16.6666%;">
@@ -802,17 +1004,13 @@ to be modified on a regular basis.</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">kvobj</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">key value</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">wbo</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">configuration</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">key value properties in kvobj format</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">key value properties in <a href="#a:wbo-spec">wbo</a> format</p></td>
 </tr>
 </tbody>
 </table>
-<div class="paragraph">
-<p>TBD define kvobj format (xdr like zfs?), better keep that small and put it into
-it&#8217;s own kvobj-node? (same as for nosql data nodes?)</p>
-</div>
 </div>
 <div class="sect2">
 <h3 id="_super_node">Super node</h3>
@@ -833,7 +1031,7 @@ Today, I don&#8217;t know how to solve that properly.</p>
 as follows.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 6. on-disk format of the super node</caption>
+<caption class="title">Table 7. on-disk format of the super node</caption>
 <colgroup>
 <col style="width: 16.6666%;">
 <col style="width: 16.6666%;">
@@ -884,7 +1082,7 @@ identify which modifications belong a specific transaction (TBD, does not make s
 when overwriting! snapshots). The id is strict monotonic increasing.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 7. on-disk format of the transaction node</caption>
+<caption class="title">Table 8. on-disk format of the transaction node</caption>
 <colgroup>
 <col style="width: 16.6666%;">
 <col style="width: 16.6666%;">
@@ -953,7 +1151,7 @@ example inline image followed by an example block image:</p>
 <p>Followed by an example table:</p>
 </div>
 <table class="tableblock frame-all grid-all" style="width: 60%;">
-<caption class="title">Table 8. An example table</caption>
+<caption class="title">Table 9. An example table</caption>
 <colgroup>
 <col style="width: 50%;">
 <col style="width: 50%;">
@@ -1070,6 +1268,9 @@ ISBN 1-56592-580-7.</p>
 <li>
 <p><a id="varint"></a>[varint] <a href="https://developers.google.com/protocol-buffers/docs/encoding" class="bare">https://developers.google.com/protocol-buffers/docs/encoding</a></p>
 </li>
+<li>
+<p><a id="bson"></a>[bson] <a href="http://bsonspec.org/spec.html" class="bare">http://bsonspec.org/spec.html</a></p>
+</li>
 </ul>
 </div>
 <div class="ulist bibliography">
@@ -1130,7 +1331,7 @@ of AsciiDoc labeled lists.</p>
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2017-12-17 22:23:56 CET
+Last updated 2017-12-27 12:21:50 CET
 </div>
 </div>
 </body>
