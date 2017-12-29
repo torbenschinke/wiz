@@ -6,6 +6,14 @@ v1.0, 2017-12-05
 :source-highlighter: rouge
 :toc:
 :toc-placement: preambe
+:media: prepress
+
+
+++++
+<link rel="stylesheet"  href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/3.1.0/css/font-awesome.min.css">
+++++
+
+:icons: font
 
 [dedication]
 Dedication
@@ -95,7 +103,7 @@ In the following, offsets are always defined in hexadecimal values prefixed by
 0x. Fixed array values are also declared using hex values, but with 0x omitted.
 
 .specification of types
-[width="100%",options="header"]
+[width="100%", cols="^3,^3,10", options="header"]
 |==============================================
 | Size | Type |  Description
 | 1-10 |varuint |  unsigned, as defined in <<varint>>
@@ -153,7 +161,7 @@ bytes '[00 03 77 69 7a 63]'.
 
 
 .on-disk format of the magic node
-[width="100%",options="header"]
+[width="100%", cols="3,^3,^3,^3,^3,10", options="header"]
 |==============================================
 | Offset| Size | Type | Name | Value | Description
 | 0x00 |1 |uint8 | node type | 0x00 | type 'header'
@@ -193,7 +201,7 @@ to minimize collisions. You may also invent your own file extension, but as a ru
 of thumb, you should never rely on it and check the magic node instead.
 
 .known sub format identifiers
-[width="100%",options="header"]
+[width="100%", cols="^3,7", options="header"]
 |==============================================
 |Value | Description
 |0x04 [77 69 7a 61] | 'wiza' the standard archive format of the command line tool
@@ -203,7 +211,7 @@ of thumb, you should never rely on it and check the magic node instead.
 The encryption formats are defined as follows:
 
 .encryption format identifiers
-[width="100%",options="header"]
+[width="100%", cols="^3,7", options="header"]
 |==============================================
 |Value | Description
 |0x00|no encryption, all nodes are written as they are, just in plain bytes
@@ -265,23 +273,52 @@ Configuration node
 ~~~~~~~~~~~~~~~~~~
 The wiz repository (as defined by the file) may include different properties. 
 These properties are important to open the repository properly, e.g. picking 
-the correct hash algorithm. Also it may contain persistent optional settings for 
-tweaking. This node must always be located at file offset 0x1000. It is not intended
-to be modified on a regular basis. It has a reserved maximum size of 128KiB(?).
+the correct hash algorithm. The hash algorithm has a fixed length, but not a fixed
+algorithm. However the algorithm configured is valid for the entire vdev set
+and must not change between vdevs. The configuration also may contain persistent 
+optional settings for tweaking, which are represented in the wbo. 
+This node directly follows the magic node.
 
 .on-disk format of the configuration node
-[width="100%",options="header"]
+[width="100%", cols="3,^3,^3,^3,^3,10", options="header"]
 |==============================================
 | Offset| Size | Type | Name | Value | Description
 | 0x00 |1 |uint8 | node type | 0x01 | type 'configuration'
+| 0x01 |1 |uint8 | hash algorithm | * | the hash algorithm to use, which must always be 256 bits / 32 byte in length
+| 0x02 |1 - 10|varuint| reserved |*| the reserved space for the wbo object. 
 | 0x01 |*|wbo| configuration|*|key value properties in <<a:wbo-spec,wbo>> format
 |==============================================
 
+By default, the reserved space for the 'wbo' should be the difference between the
+actual size of the magic node and the first physical sector at offset 0x1000.
+However, a writer may decide to ignore that and not to provide any reserved space
+or even provide more sectors.
+
+WARNING: A configuration node should provide some space to allow changes to the 
+'wbo', so that permanent changes are possible without rewriting the entire file.
+
+In general, the configuration node is not intended to be modified on a regular basis,
+and therefore there is no infrastructure to provide any resilence here. The settings
+here are intended to be written either at creation time or for recovering or debugging
+purposes.
+
+
+.hash algorithm identifiers
+[width="100%", cols="^3,7", options="header"]
+|==============================================
+|Value | Description
+|0x00|SHA-256
+|0x01|SHA-512/256
+|0x02|SHA3-256
+|==============================================
 
 Super node
 ~~~~~~~~~~
-The super node is a ring buffer having 128 <<a:transaction-node,transaction entries>> which
-are written in a round-robin manner. The transaction node with the highest transaction
+The super node is a ring buffer having a variable amount of <<a:transaction-node,transaction entries>> 
+which are written in a round-robin manner. The minimum valid capacity is 1 and the maximum
+amount if 255. The larger the ring buffer, the more possiblities to recover older states
+are available. Consider e.g. a capacity of 128 for single file formats, but 1
+when appending only new vdevs. The transaction node with the highest transaction
 id and a valid checksum is the transaction node to use. If something went wrong,
 older transactions may be used for recovery, but the usefulness depends on the kind
 of damage. Usually one would expect that if the transaction is written to the
@@ -291,15 +328,25 @@ however there is no guarantee on that. Also fsync cannot protect us from that,
 because it is broken on many filesystems, even by design (see also <<btrfs-fsync>>).
 Today, I don't know how to solve that properly. 
 
-The super node is always located at file offset 0x2000 (TBD) and is defined
-as follows.
+TIP: To get the best resilence, you should never overwrite any data and instead create a new vdev
+for every transaction and fsync the file contents and the directory in the right
+order.
+
+The super node must be the third node after the 'configuration node' and should be 
+located at file offset 0x1000. But remember, that depending on the reserved space of
+the wbo in the configuration node, there is no guarantee for that.
+
+TIP: The super node is rewritten for each transaction and has a high write 
+amplification. It should always match the physical addressing of the file system
+or the raw device to optimize performance.
 
 .on-disk format of the super node
-[width="100%",options="header"]
+[width="100%", cols="3,^3,^3,^3,^3,10", options="header"]
 |==============================================
 | Offset| Size | Type | Name | Value | Description
 | 0x00 |1 |uint8 | node type | 0x02 | type 'super'
-| 0x01 |128 * ?|[]tx-node| array|*|ring buffer of 128 transaction nodes
+| 0x01 |1 |uint8 | size | * | # entries in ring buffer as 'n'
+| 0x02 |'n' * ?|[]tx-node| array|*|ring buffer of 'n' transaction nodes
 |==============================================
 
 [[a:transaction-node]]
@@ -314,7 +361,7 @@ identify which modifications belong a specific transaction (TBD, does not make s
 when overwriting! snapshots). The id is strict monotonic increasing.
 
 .on-disk format of the transaction node
-[width="100%",options="header"]
+[width="100%", cols="3,^3,^3,^3,^3,10", options="header"]
 |==============================================
 | Offset| Size | Type | Name | Value | Description
 | 0x00 |1 |uint8 | node type | 0x03 | type 'transaction'

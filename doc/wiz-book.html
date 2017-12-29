@@ -464,6 +464,11 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </div>
 </div>
 <div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<link rel="stylesheet"  href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/3.1.0/css/font-awesome.min.css">
+</div>
+</div>
 <div class="sect1">
 <h2 id="_dedication">Dedication</h2>
 <div class="sectionbody">
@@ -563,46 +568,46 @@ gain, for an implementation of this specification.</p>
 <table class="tableblock frame-all grid-all spread">
 <caption class="title">Table 1. specification of types</caption>
 <colgroup>
-<col style="width: 33.3333%;">
-<col style="width: 33.3333%;">
-<col style="width: 33.3334%;">
+<col style="width: 18.75%;">
+<col style="width: 18.75%;">
+<col style="width: 62.5%;">
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">Size</th>
-<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-center valign-top">Size</th>
+<th class="tableblock halign-center valign-top">Type</th>
 <th class="tableblock halign-left valign-top">Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1-10</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">varuint</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1-10</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">varuint</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">unsigned, as defined in <a href="#varint">[varint]</a></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1-10</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">varint</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1-10</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">varint</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">signed, as defined in <a href="#varint">[varint]</a></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1-10</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vdev id</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1-10</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">vdev id</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">varint id, must be unique within a vdev set</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">2-20</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">ndptr</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">2-20</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">ndptr</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">a node pointer is a double varint 128 bit address, where the first 10 byte determine the vdev id and the last 10 byte determine the physical offset in the vdev.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1-*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">utf8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1-*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">utf8</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">UTF-8 sequences are encoded with a prefix of the type <em>varuint</em> followed by an arbritary amount of bytes</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">2-*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">wbo</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">2-*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">wbo</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">a wbo serialized object</p></td>
 </tr>
 </tbody>
@@ -730,78 +735,78 @@ bytes <em>[00 03 77 69 7a 63]</em>.</p>
 <table class="tableblock frame-all grid-all spread">
 <caption class="title">Table 3. on-disk format of the magic node</caption>
 <colgroup>
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.667%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 40%;">
 </colgroup>
 <thead>
 <tr>
 <th class="tableblock halign-left valign-top">Offset</th>
-<th class="tableblock halign-left valign-top">Size</th>
-<th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Name</th>
-<th class="tableblock halign-left valign-top">Value</th>
+<th class="tableblock halign-center valign-top">Size</th>
+<th class="tableblock halign-center valign-top">Type</th>
+<th class="tableblock halign-center valign-top">Name</th>
+<th class="tableblock halign-center valign-top">Value</th>
 <th class="tableblock halign-left valign-top">Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x00</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">uint8</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">node type</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x00</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">uint8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">node type</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x00</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">type <em>header</em></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">uint32</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">version</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x03</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">uint32</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">version</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x03</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">this is the third version of the wiz format</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x05</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">4</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">[]uint8</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">magic</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">[77 69 7a 63]</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">[]uint8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">magic</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">[77 69 7a 63]</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">the magic header value <em>wizc</em> for the container</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x06</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">uint8</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">encryption type</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">uint8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">encryption type</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">the kind of encryption algorithm for the pages</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x07</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">utf8</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">sub magic</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">utf8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">sub magic</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">the user defined sub magic header value as varuint prefixed UTF-8</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">#5</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">16</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">UUID</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">wiz file set identifier</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">UUID</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">wiz file set identifier</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">the UUID of this wiz storage. Any vdev id and therefore ndptr is only valid within the same set of wiz files sharing the same UUID.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">#6</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1-10</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">varuint</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">vdev id</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1-10</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">varuint</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">vdev id</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">The unique vdev id of this wiz file within the file set. Should start with 0.</p></td>
 </tr>
 </tbody>
@@ -837,22 +842,22 @@ of thumb, you should never rely on it and check the magic node instead.</p>
 <table class="tableblock frame-all grid-all spread">
 <caption class="title">Table 4. known sub format identifiers</caption>
 <colgroup>
-<col style="width: 50%;">
-<col style="width: 50%;">
+<col style="width: 30%;">
+<col style="width: 70%;">
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">Value</th>
+<th class="tableblock halign-center valign-top">Value</th>
 <th class="tableblock halign-left valign-top">Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x04 [77 69 7a 61]</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x04 [77 69 7a 61]</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><em>wiza</em> the standard archive format of the command line tool</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x04 [77 69 7a 62]</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x04 [77 69 7a 62]</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><em>wizb</em> the format of the backup tool</p></td>
 </tr>
 </tbody>
@@ -863,22 +868,22 @@ of thumb, you should never rely on it and check the magic node instead.</p>
 <table class="tableblock frame-all grid-all spread">
 <caption class="title">Table 5. encryption format identifiers</caption>
 <colgroup>
-<col style="width: 50%;">
-<col style="width: 50%;">
+<col style="width: 30%;">
+<col style="width: 70%;">
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-left valign-top">Value</th>
+<th class="tableblock halign-center valign-top">Value</th>
 <th class="tableblock halign-left valign-top">Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x00</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x00</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">no encryption, all nodes are written as they are, just in plain bytes</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x01</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">AES-256 CTR mode</p></td>
 </tr>
 </tbody>
@@ -900,7 +905,7 @@ has access to the files.</p>
 <table>
 <tr>
 <td class="icon">
-<div class="title">Tip</div>
+<i class="fa icon-tip" title="Tip"></i>
 </td>
 <td class="content">
 Choose wisely your trade-of when considering (large) file
@@ -920,7 +925,7 @@ here.</p>
 <table>
 <tr>
 <td class="icon">
-<div class="title">Caution</div>
+<i class="fa icon-caution" title="Caution"></i>
 </td>
 <td class="content">
 Each application has to define where to write or update
@@ -968,46 +973,116 @@ and never change an already written file.</p>
 <div class="paragraph">
 <p>The wiz repository (as defined by the file) may include different properties.
 These properties are important to open the repository properly, e.g. picking
-the correct hash algorithm. Also it may contain persistent optional settings for
-tweaking. This node must always be located at file offset 0x1000. It is not intended
-to be modified on a regular basis. It has a reserved maximum size of 128KiB(?).</p>
+the correct hash algorithm. The hash algorithm has a fixed length, but not a fixed
+algorithm. However the algorithm configured is valid for the entire vdev set
+and must not change between vdevs. The configuration also may contain persistent
+optional settings for tweaking, which are represented in the wbo.
+This node directly follows the magic node.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
 <caption class="title">Table 6. on-disk format of the configuration node</caption>
 <colgroup>
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.667%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 40%;">
 </colgroup>
 <thead>
 <tr>
 <th class="tableblock halign-left valign-top">Offset</th>
-<th class="tableblock halign-left valign-top">Size</th>
-<th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Name</th>
-<th class="tableblock halign-left valign-top">Value</th>
+<th class="tableblock halign-center valign-top">Size</th>
+<th class="tableblock halign-center valign-top">Type</th>
+<th class="tableblock halign-center valign-top">Name</th>
+<th class="tableblock halign-center valign-top">Value</th>
 <th class="tableblock halign-left valign-top">Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x00</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">uint8</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">node type</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">uint8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">node type</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x01</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">type <em>configuration</em></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">wbo</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">configuration</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">uint8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">hash algorithm</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the hash algorithm to use, which must always be 256 bits / 32 byte in length</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x02</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1 - 10</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">varuint</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">reserved</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the reserved space for the wbo object.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">wbo</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">configuration</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">key value properties in <a href="#a:wbo-spec">wbo</a> format</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>By default, the reserved space for the <em>wbo</em> should be the difference between the
+actual size of the magic node and the first physical sector at offset 0x1000.
+However, a writer may decide to ignore that and not to provide any reserved space
+or even provide more sectors.</p>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-warning" title="Warning"></i>
+</td>
+<td class="content">
+A configuration node should provide some space to allow changes to the
+<em>wbo</em>, so that permanent changes are possible without rewriting the entire file.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>In general, the configuration node is not intended to be modified on a regular basis,
+and therefore there is no infrastructure to provide any resilence here. The settings
+here are intended to be written either at creation time or for recovering or debugging
+purposes.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 7. hash algorithm identifiers</caption>
+<colgroup>
+<col style="width: 30%;">
+<col style="width: 70%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-center valign-top">Value</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x00</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SHA-256</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x01</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SHA-512/256</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x02</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">SHA3-256</p></td>
 </tr>
 </tbody>
 </table>
@@ -1015,8 +1090,11 @@ to be modified on a regular basis. It has a reserved maximum size of 128KiB(?).<
 <div class="sect2">
 <h3 id="_super_node">Super node</h3>
 <div class="paragraph">
-<p>The super node is a ring buffer having 128 <a href="#a:transaction-node">transaction entries</a> which
-are written in a round-robin manner. The transaction node with the highest transaction
+<p>The super node is a ring buffer having a variable amount of <a href="#a:transaction-node">transaction entries</a>
+which are written in a round-robin manner. The minimum valid capacity is 1 and the maximum
+amount if 255. The larger the ring buffer, the more possiblities to recover older states
+are available. Consider e.g. a capacity of 128 for single file formats, but 1
+when appending only new vdevs. The transaction node with the highest transaction
 id and a valid checksum is the transaction node to use. If something went wrong,
 older transactions may be used for recovery, but the usefulness depends on the kind
 of damage. Usually one would expect that if the transaction is written to the
@@ -1026,46 +1104,83 @@ however there is no guarantee on that. Also fsync cannot protect us from that,
 because it is broken on many filesystems, even by design (see also <a href="#btrfs-fsync">[btrfs-fsync]</a>).
 Today, I don&#8217;t know how to solve that properly.</p>
 </div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+To get the best resilence, you should never overwrite any data and instead create a new vdev
+for every transaction and fsync the file contents and the directory in the right
+order.
+</td>
+</tr>
+</table>
+</div>
 <div class="paragraph">
-<p>The super node is always located at file offset 0x2000 (TBD) and is defined
-as follows.</p>
+<p>The super node must be the third node after the <em>configuration node</em> and should be
+located at file offset 0x1000. But remember, that depending on the reserved space of
+the wbo in the configuration node, there is no guarantee for that.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+The super node is rewritten for each transaction and has a high write
+amplification. It should always match the physical addressing of the file system
+or the raw device to optimize performance.
+</td>
+</tr>
+</table>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 7. on-disk format of the super node</caption>
+<caption class="title">Table 8. on-disk format of the super node</caption>
 <colgroup>
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.667%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 40%;">
 </colgroup>
 <thead>
 <tr>
 <th class="tableblock halign-left valign-top">Offset</th>
-<th class="tableblock halign-left valign-top">Size</th>
-<th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Name</th>
-<th class="tableblock halign-left valign-top">Value</th>
+<th class="tableblock halign-center valign-top">Size</th>
+<th class="tableblock halign-center valign-top">Type</th>
+<th class="tableblock halign-center valign-top">Name</th>
+<th class="tableblock halign-center valign-top">Value</th>
 <th class="tableblock halign-left valign-top">Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x00</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">uint8</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">node type</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x02</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">uint8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">node type</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x02</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">type <em>super</em></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">128 * ?</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">[]tx-node</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">array</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">ring buffer of 128 transaction nodes</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">uint8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">size</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"># entries in ring buffer as <em>n</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">0x02</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock"><em>n</em> * ?</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">[]tx-node</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">array</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">ring buffer of <em>n</em> transaction nodes</p></td>
 </tr>
 </tbody>
 </table>
@@ -1082,40 +1197,40 @@ identify which modifications belong a specific transaction (TBD, does not make s
 when overwriting! snapshots). The id is strict monotonic increasing.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 8. on-disk format of the transaction node</caption>
+<caption class="title">Table 9. on-disk format of the transaction node</caption>
 <colgroup>
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.6666%;">
-<col style="width: 16.667%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 40%;">
 </colgroup>
 <thead>
 <tr>
 <th class="tableblock halign-left valign-top">Offset</th>
-<th class="tableblock halign-left valign-top">Size</th>
-<th class="tableblock halign-left valign-top">Type</th>
-<th class="tableblock halign-left valign-top">Name</th>
-<th class="tableblock halign-left valign-top">Value</th>
+<th class="tableblock halign-center valign-top">Size</th>
+<th class="tableblock halign-center valign-top">Type</th>
+<th class="tableblock halign-center valign-top">Name</th>
+<th class="tableblock halign-center valign-top">Value</th>
 <th class="tableblock halign-left valign-top">Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x00</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">uint8</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">node type</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">0x03</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">uint8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">node type</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x03</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">type <em>transaction</em></p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">0x01</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">8</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">uint64</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">transaction id</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">uint64</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">transaction id</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">increasing number</p></td>
 </tr>
 </tbody>
@@ -1151,7 +1266,7 @@ example inline image followed by an example block image:</p>
 <p>Followed by an example table:</p>
 </div>
 <table class="tableblock frame-all grid-all" style="width: 60%;">
-<caption class="title">Table 9. An example table</caption>
+<caption class="title">Table 10. An example table</caption>
 <colgroup>
 <col style="width: 50%;">
 <col style="width: 50%;">
@@ -1331,7 +1446,7 @@ of AsciiDoc labeled lists.</p>
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2017-12-27 12:21:50 CET
+Last updated 2017-12-29 17:41:36 CET
 </div>
 </div>
 </body>

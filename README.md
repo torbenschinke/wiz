@@ -19,6 +19,13 @@ A versioned and signed database for large files
 - [ ] Implement shared library for android, using go
 - [ ] Implement a cross platform GUI (e.g. JavaFX) for the command line application
 
+
+See the complete documentation in the [wiz-book](doc/wiz-book.adoc).
+
+
+The following documentation is deprecated and is currently rewritten and integrated
+into the wiz-book.
+
 # TOC
 * [wiz](#wiz)
 * [status](#status)
@@ -50,11 +57,11 @@ A versioned and signed database for large files
 Basically wiz is just a specification of different nodes. In general a node should be kept so small, that the executing environment can process nodes in memory entirely (take also compression into account, especially after decompression), however it is up to the writer to decide which is best in the intended use case.
 
 ## Nodes in general
-A node always starts with a byte identifier and is usually followed by a varuint so that it has usually a 2 byte overhead (the type and the length referring to 0-127 byte payload) which increases dynamically as the payload size increases. Overhead also depends on the used compression algorithm, if a node supports that at all. The payload of a node should not exceed something reasonable, e.g. ZFS uses 128KiB but you may even go into the range of MiB to increase efficiency. The UTF8 type is always prefixed with a varuint length to increase efficiency for short strings but allowing also more than the typical 64k bytes. All numbers are treated as big endian to match network byte order. Even if most operating systems are little endian today, one cannot ignore BE systems, so any code must be endian independent anyway. It is not expected that wiz may profit from a system specific endianess, like ZFS does.
+A node always starts with a byte identifier and is otherwise undefined. Most lengths uses a varuint so that it has an adaptive overhead which increases dynamically as the payload size increases. Overhead also depends on the used compression algorithm, if a node supports that at all. The payload of a node should not exceed something reasonable, e.g. ZFS uses 128KiB but you may even go into the range of MiB to increase efficiency. The UTF8 type is always prefixed with a varuint length to increase efficiency for short strings but allowing also more than the typical 64k bytes. All numbers are treated as big endian to match network byte order. As a side note, even if most operating systems are little endian today, one cannot ignore BE systems, so any code must be endian independent anyway. It is not expected that wiz may profit from a system specific endianess, like ZFS does.
 
 
 ## Header node
-Marks a container and must be always the first node of a file and should not occur once again. If it does (e.g. for recovery purposes), it is not allowed to be contradictory. Wiz containers can simply be identified using the magic bytes [0x00 0x77 0x69 0x7a 0x63].
+Marks a container and must be always the first node of a file at offset 0x00 and should not occur once again. If it does (e.g. for recovery purposes), it is not allowed to be contradictory. Wiz containers can simply be identified using the magic bytes [0x00 0x77 0x69 0x7a 0x63].
 ```
        name                value        length         type
 ---------------------|---------------|-----------|----------------
@@ -90,7 +97,7 @@ The encryption formats are defined as follows:
 See the encryption chapter for the detailed specification of each encryption mode.
 
 ## Configuration node
-The wiz repository (as defined by the file) may include different properties. These properties are important to open the repository properly, e.g. picking the correct hash algorithm. This node must always be the second after the header.
+The wiz repository (as defined by the file) may include different properties. These properties are important to open the repository properly, e.g. picking the correct hash algorithm. Also may contain persistent optional settings for tweaking. This node must always be the second after the header and located at file offset 0x1000.
 
 ```
        name                value        length         type
