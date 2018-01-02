@@ -73,14 +73,18 @@ encrypt payload would be the same kind of security flaw.
 Pointers to nodes have a variadic size from 2 bytes upto 20 bytes, which boils
 down to a theoretical 128 bit addressing, in which the first 10 bytes refer to
 the id of a virtual device (vdev) and the last 10 bytes to a physical offset. 
-The additonal two bytes are caused by the overhead of the varint encoding. The vdev
-is usually a simple file in your host's filesystem. Using this technique, the
-pointer adapts itself to different use cases, like many small vdevs or
+The additonal two bytes are caused by the overhead of the varint LEB128 encoding. 
+The vdev is usually a simple file in your host's filesystem. 
+Using this technique, the pointer adapts itself to 
+different use cases, like many small vdevs or
 a single large file. The usage of a varint favors storage costs over
 performance. Addressing millions of nodes, especially in independent vdev sets
 - I think of an online mirror storage - would waste a lot of space. In this
 scenario, one could argue that the performance penalties are also on 
-the client side and will not stress the server at all.
+the client side and will not stress the server at all. There are also
+use cases in which a high fragmentation is caused. In such scenarios
+it is cheaper to resolve physical addresses over another indirection. For this
+there are a number of reserved 'vdev' ids.
 
 All texts should be encoded in UTF-8, however there is no simple answer for filepaths.
 When taking a look at Git and how it handles filenames, it works perfectly on
@@ -118,8 +122,9 @@ In the following, offsets are always defined in hexadecimal values prefixed by
 |2-*|wbo| a wbo serialized object
 |==============================================
 
+[[a:table-leb128]]
 .examples of varuint encodings using LEB128
-[width="100%", cols="^3,^3,10", options="header"]
+[width="100%", cols="3,^3,10", options="header"]
 |==============================================
 | Dezimal | Length |  Binary
 | 1 | 1 | 00000001 
@@ -137,13 +142,24 @@ In the following, offsets are always defined in hexadecimal values prefixed by
 | 18446744073709551615 | 10 | 11111111  11111111  11111111  11111111  11111111  11111111  11111111  11111111  11111111  00000001
 |==============================================
 
-As you can see from the example encoding table one can expect that most 'ndptr' values
+As you can see from the example encoding table <<a:table-leb128,table>> one can expect that most 'ndptr' values
 will be in the size of 1 for the 'vdev' and 4-6 for the offset, so expect an average 
 size of 5-7 byte per pointer. So in contrast to a naive encoding of a full 128bit 
-pointer we only need 30% to 43% of the space which is even less than for a 64bit pointer. 
+pointer we only need 30% to 43% of the space which is even less than for an
+uncompressed 64bit pointer. 
 
- TODO: a virtual adress would either not require a varuint or is even one byte smaller. 
- Also it would make things like defragmentation and sector relocation easy.
+TIP: You can also use virtual addresses when using the reserved 'vdev' id.
+This makes things like defragmentation and sector relocation a lot easier but
+introduces a significant overhead.
+
+[[a:table-leb128]]
+.Reserved vdev identifiers
+[width="100%", cols="^3,10", options="header"]
+|==============================================
+| Value | Description
+| 0x00 | Refers to the unique lookup table to resolve virtual node ids/addresses to physical ones.
+| 0x01...0xF | Reserved for future use.
+|==============================================
 
 [[a:wbo-spec]]
 WBO specification
@@ -283,7 +299,7 @@ For single file formats (ever a single vdev) always update the ringbuffer.
 Type 2
 ^^^^^^
 A performance optimized stripe vdev set (like RAID 0) only updates
-the ring buffer in the vdev with the lowest number (typical 0). Stripe sets
+the ring buffer in the vdev with the lowest number (typical 16). Stripe sets
 are wobbly anyway. So actually 'Type 1' is only a special case of a stripe set
 with a single vdev.
 
@@ -388,32 +404,32 @@ and all references to nodes which describe the valid state of the entire storage
 When applying changes to the storage all changes are made using COW (copy on write)
 techniques. Even a simple delete will cause a write cascade, from a leaf to the
 root, to represent the change. Afterwards the new commit is referenced by a new transaction node.
-As soon as the transaction mode has made it to disk, at least the predecessor still
+As soon as the transaction node has made it to disk, at least the predecessor still
 points to a valid state, however the pre-predecessor may now point to overwritten
 data, so the possibilities of recovery are limited (comparable to <<zfs-magic>>), due to
-the usage of free areas as referenced by the free tree. Note that a writer may 
+the usage of free areas as declared by the 'free space tree'. Note that a writer may 
 implement various algorithms to lower fragmentation by deferring writes and by prefer
 writing to new areas instead of filling holes. Also a writer may defragment storage
-by rewriting nodes and updating all related 'ndptrs'. However we do not introduce
-another layer of indirection to ease these things, because it will double the amount
+by rewriting nodes and updating all related 'ndptrs', which probably one of the
+most expensive operations. On the other side, keep in mind, that using 
+the reserved 'vdev' for the indirect address table, lookups will double the amount
 of required in-memory space and doubles the amount of initial I/O to resolve values from
-disk, which slows down initial lookup operations.
+disk, which slows down everything else. Depending on the use case, this may be a good
+choice to support faster defragmentation.
 
-includes references to the root nodes for snapshots (equivalent to tags and branches)
-and also to additional trees, holding information about reference counts and deleted
-nodes. The 'transaction id' is found in all other written nodes (TBD) to easily
-identify which modifications belong a specific transaction (TBD, does not make sense
-when overwriting! snapshots). The id is strict monotonic increasing.
+The transaction id is a strict monotonic number.
 
 .on-disk format of the transaction node
-[width="100%", cols="3,^3,^3,^3,^3,10", options="header"]
+[width="100%", cols="2,^2,^3,^5,^3,10", options="header"]
 |==============================================
 | Order| Size | Type | Name | Value | Description
 | #0 |1 |uint8 | node type | 0x03 | type 'transaction'
 | #1 |8|uint64| transaction id|*|increasing number
-| #2 |16|ndptr| snapshot tree | *| an uncompressed 128 bit node pointer to the branch tree
-| #2 |16|ndptr| free tree | *| an uncompressed 128 bit node pointer to the tree of free areas
-| #2 |16|ndptr| reference count tree | *| an uncompressed 128 bit node pointer to the tree of reference counts
+| #2 |16|ndptr| vtable | * | reference to the virtual address table. If the offset (the last 8 byte) are 0x00, no virtual addresses are in use yet (and have never been used).
+| #3 |16|ndptr| commit tree | *| an uncompressed 128 bit node pointer to the tree of named commits (tags or branches)
+| #4 |16|ndptr| free space tree | *| an uncompressed 128 bit node pointer to the tree of free areas
+| #5 |16|ndptr| reference count tree | *| an uncompressed 128 bit node pointer to the tree of reference counts
+| #6 |32|hash| checksum |* | the hash of fields #0 - #5
 |==============================================
 
 Chapters can contain sub-sections nested up to three deep.

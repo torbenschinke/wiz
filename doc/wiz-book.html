@@ -534,14 +534,18 @@ encrypt payload would be the same kind of security flaw.</p>
 <p>Pointers to nodes have a variadic size from 2 bytes upto 20 bytes, which boils
 down to a theoretical 128 bit addressing, in which the first 10 bytes refer to
 the id of a virtual device (vdev) and the last 10 bytes to a physical offset.
-The additonal two bytes are caused by the overhead of the varint encoding. The vdev
-is usually a simple file in your host&#8217;s filesystem. Using this technique, the
-pointer adapts itself to different use cases, like many small vdevs or
+The additonal two bytes are caused by the overhead of the varint LEB128 encoding.
+The vdev is usually a simple file in your host&#8217;s filesystem.
+Using this technique, the pointer adapts itself to
+different use cases, like many small vdevs or
 a single large file. The usage of a varint favors storage costs over
 performance. Addressing millions of nodes, especially in independent vdev sets
 - I think of an online mirror storage - would waste a lot of space. In this
 scenario, one could argue that the performance penalties are also on
-the client side and will not stress the server at all.</p>
+the client side and will not stress the server at all. There are also
+use cases in which a high fragmentation is caused. In such scenarios
+it is cheaper to resolve physical addresses over another indirection. For this
+there are a number of reserved <em>vdev</em> ids.</p>
 </div>
 <div class="paragraph">
 <p>All texts should be encoded in UTF-8, however there is no simple answer for filepaths.
@@ -626,7 +630,7 @@ gain, for an implementation of this specification.</p>
 </tr>
 </tbody>
 </table>
-<table class="tableblock frame-all grid-all spread">
+<table id="a:table-leb128" class="tableblock frame-all grid-all spread">
 <caption class="title">Table 2. examples of varuint encodings using LEB128</caption>
 <colgroup>
 <col style="width: 18.75%;">
@@ -635,91 +639,123 @@ gain, for an implementation of this specification.</p>
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-center valign-top">Dezimal</th>
+<th class="tableblock halign-left valign-top">Dezimal</th>
 <th class="tableblock halign-center valign-top">Length</th>
 <th class="tableblock halign-left valign-top">Binary</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">00000001</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">127</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">127</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">01111111</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">128</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">128</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">2</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">10000000  0000001</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">16383</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16383</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">2</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">11111111  01111111</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">16384</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">16384</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">3</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">10000000  10000000  00000001</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">32767</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">32767</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">3</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">11111111  11111111  00000001</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">65535</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">65535</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">3</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">11111111  11111111  00000011</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">2147483647</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">2147483647</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">5</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">11111111  11111111  11111111  11111111  00000111</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">4294967295</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">4294967295</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">5</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">11111111  11111111  11111111  11111111  00001111</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">1099511627520</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">1099511627520</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">6</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">10000000  11111110  11111111  11111111  11111111  00011111</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">17592186040320</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">17592186040320</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">7</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">10000000  11100000  11111111  11111111  11111111  11111111  00000011</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">9223372036854775807</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">9223372036854775807</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">9</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">11111111  11111111  11111111  11111111  11111111  11111111  11111111  11111111  01111111</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">18446744073709551615</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">18446744073709551615</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">10</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">11111111  11111111  11111111  11111111  11111111  11111111  11111111  11111111  11111111  00000001</p></td>
 </tr>
 </tbody>
 </table>
 <div class="paragraph">
-<p>As you can see from the example encoding table one can expect that most <em>ndptr</em> values
+<p>As you can see from the example encoding table <a href="#a:table-leb128">table</a> one can expect that most <em>ndptr</em> values
 will be in the size of 1 for the <em>vdev</em> and 4-6 for the offset, so expect an average
 size of 5-7 byte per pointer. So in contrast to a naive encoding of a full 128bit
-pointer we only need 30% to 43% of the space which is even less than for a 64bit pointer.</p>
+pointer we only need 30% to 43% of the space which is even less than for an
+uncompressed 64bit pointer.</p>
 </div>
-<div class="literalblock">
-<div class="content">
-<pre>TODO: a virtual adress would either not require a varuint or is even one byte smaller.
-Also it would make things like defragmentation and sector relocation easy.</pre>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+You can also use virtual addresses when using the reserved <em>vdev</em> id.
+This makes things like defragmentation and sector relocation a lot easier but
+introduces a significant overhead.
+</td>
+</tr>
+</table>
 </div>
-</div>
+<table id="a:table-leb128" class="tableblock frame-all grid-all spread">
+<caption class="title">Table 3. Reserved vdev identifiers</caption>
+<colgroup>
+<col style="width: 23.0769%;">
+<col style="width: 76.9231%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-center valign-top">Value</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x00</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Refers to the unique lookup table to resolve virtual node ids/addresses to physical ones.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x01&#8230;&#8203;0xF</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"> Reserved for future use.</p></td>
+</tr>
+</tbody>
+</table>
 <div class="sect2">
 <h3 id="a:wbo-spec">WBO specification</h3>
 <div class="paragraph">
@@ -731,7 +767,7 @@ approach, we do not plan to update a distinct data field within a written struct
 BSON cannot guarantee that either when increasing the length of a string.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 3. Pseudo BNF, types as uint8 in quotes</caption>
+<caption class="title">Table 4. Pseudo BNF, types as uint8 in quotes</caption>
 <colgroup>
 <col style="width: 50%;">
 <col style="width: 50%;">
@@ -841,7 +877,7 @@ to be contradictory. Wiz containers can simply be identified using the magic
 bytes <em>[00 03 77 69 7a 63]</em>.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 4. on-disk format of the magic node</caption>
+<caption class="title">Table 5. on-disk format of the magic node</caption>
 <colgroup>
 <col style="width: 12%;">
 <col style="width: 12%;">
@@ -948,7 +984,7 @@ to minimize collisions. You may also invent your own file extension, but as a ru
 of thumb, you should never rely on it and check the magic node instead.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 5. known sub format identifiers</caption>
+<caption class="title">Table 6. known sub format identifiers</caption>
 <colgroup>
 <col style="width: 30%;">
 <col style="width: 70%;">
@@ -974,7 +1010,7 @@ of thumb, you should never rely on it and check the magic node instead.</p>
 <p>The encryption formats are defined as follows:</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 6. encryption format identifiers</caption>
+<caption class="title">Table 7. encryption format identifiers</caption>
 <colgroup>
 <col style="width: 30%;">
 <col style="width: 70%;">
@@ -1056,7 +1092,7 @@ If a type matches your use case, apply one of the following rules.</p>
 <h4 id="_type_2">Type 2</h4>
 <div class="paragraph">
 <p>A performance optimized stripe vdev set (like RAID 0) only updates
-the ring buffer in the vdev with the lowest number (typical 0). Stripe sets
+the ring buffer in the vdev with the lowest number (typical 16). Stripe sets
 are wobbly anyway. So actually <em>Type 1</em> is only a special case of a stripe set
 with a single vdev.</p>
 </div>
@@ -1088,7 +1124,7 @@ The configuration also may contain persistent optional settings for tweaking,
 which are represented in the wbo. This node directly follows the magic node.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 7. on-disk format of the configuration node</caption>
+<caption class="title">Table 8. on-disk format of the configuration node</caption>
 <colgroup>
 <col style="width: 12%;">
 <col style="width: 12%;">
@@ -1168,7 +1204,7 @@ here are intended to be written either at creation time or for recovering or deb
 purposes.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 8. hash algorithm identifiers</caption>
+<caption class="title">Table 9. hash algorithm identifiers</caption>
 <colgroup>
 <col style="width: 30%;">
 <col style="width: 70%;">
@@ -1246,7 +1282,7 @@ or the raw device to optimize performance.
 </table>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 9. on-disk format of the super node</caption>
+<caption class="title">Table 10. on-disk format of the super node</caption>
 <colgroup>
 <col style="width: 12%;">
 <col style="width: 12%;">
@@ -1301,31 +1337,29 @@ and all references to nodes which describe the valid state of the entire storage
 When applying changes to the storage all changes are made using COW (copy on write)
 techniques. Even a simple delete will cause a write cascade, from a leaf to the
 root, to represent the change. Afterwards the new commit is referenced by a new transaction node.
-As soon as the transaction mode has made it to disk, at least the predecessor still
+As soon as the transaction node has made it to disk, at least the predecessor still
 points to a valid state, however the pre-predecessor may now point to overwritten
 data, so the possibilities of recovery are limited (comparable to <a href="#zfs-magic">[zfs-magic]</a>), due to
-the usage of free areas as referenced by the free tree. Note that a writer may
+the usage of free areas as declared by the <em>free space tree</em>. Note that a writer may
 implement various algorithms to lower fragmentation by deferring writes and by prefer
 writing to new areas instead of filling holes. Also a writer may defragment storage
-by rewriting nodes and updating all related <em>ndptrs</em>. However we do not introduce
-another layer of indirection to ease these things, because it will double the amount
+by rewriting nodes and updating all related <em>ndptrs</em>, which probably one of the
+most expensive operations. On the other side, keep in mind, that using
+the reserved <em>vdev</em> for the indirect address table, lookups will double the amount
 of required in-memory space and doubles the amount of initial I/O to resolve values from
-disk, which slows down initial lookup operations.</p>
+disk, which slows down everything else. Depending on the use case, this may be a good
+choice to support faster defragmentation.</p>
 </div>
 <div class="paragraph">
-<p>includes references to the root nodes for snapshots (equivalent to tags and branches)
-and also to additional trees, holding information about reference counts and deleted
-nodes. The <em>transaction id</em> is found in all other written nodes (TBD) to easily
-identify which modifications belong a specific transaction (TBD, does not make sense
-when overwriting! snapshots). The id is strict monotonic increasing.</p>
+<p>The transaction id is a strict monotonic number.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 10. on-disk format of the transaction node</caption>
+<caption class="title">Table 11. on-disk format of the transaction node</caption>
 <colgroup>
+<col style="width: 8%;">
+<col style="width: 8%;">
 <col style="width: 12%;">
-<col style="width: 12%;">
-<col style="width: 12%;">
-<col style="width: 12%;">
+<col style="width: 20%;">
 <col style="width: 12%;">
 <col style="width: 40%;">
 </colgroup>
@@ -1360,25 +1394,41 @@ when overwriting! snapshots). The id is strict monotonic increasing.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">#2</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">16</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">ndptr</p></td>
-<td class="tableblock halign-center valign-top"><p class="tableblock">snapshot tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">vtable</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the branch tree</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">reference to the virtual address table. If the offset (the last 8 byte) are 0x00, no virtual addresses are in use yet (and have never been used).</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">#2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#3</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">16</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">ndptr</p></td>
-<td class="tableblock halign-center valign-top"><p class="tableblock">free tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">commit tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the tree of named commits (tags or branches)</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#4</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">ndptr</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">free space tree</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the tree of free areas</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">#2</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#5</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">16</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">ndptr</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">reference count tree</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the tree of reference counts</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#6</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">32</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">hash</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">checksum</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the hash of fields #0 - #5</p></td>
 </tr>
 </tbody>
 </table>
@@ -1413,7 +1463,7 @@ example inline image followed by an example block image:</p>
 <p>Followed by an example table:</p>
 </div>
 <table class="tableblock frame-all grid-all" style="width: 60%;">
-<caption class="title">Table 11. An example table</caption>
+<caption class="title">Table 12. An example table</caption>
 <colgroup>
 <col style="width: 50%;">
 <col style="width: 50%;">
@@ -1596,7 +1646,7 @@ of AsciiDoc labeled lists.</p>
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2018-01-02 14:38:00 CET
+Last updated 2018-01-02 19:02:15 CET
 </div>
 </div>
 </body>
