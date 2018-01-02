@@ -93,6 +93,10 @@ overhead for most expected strings (up to 127 byte, runes may vary). We define
 a text payload always as UTF-8 (a varint prefixed array of uint8) and undefined
 text payload as a varint prefixed array of uint8.
 
+TIP: Nodes need not to be aligned to physical sectors, but if you do so, one can expect 
+better performance and recoverability but you will sacrifice space efficiency. 
+Consider a 4k sector alignment for todays devices.
+
 In general, byte order is the common network order - big endian. Most elements
 are already invariant to endianess, like varint or arrays. There is no expectation
 that a specialization to the host endianess will actually result in any performance
@@ -113,6 +117,33 @@ In the following, offsets are always defined in hexadecimal values prefixed by
 |1-*|utf8| UTF-8 sequences are encoded with a prefix of the type 'varuint' followed by an arbritary amount of bytes
 |2-*|wbo| a wbo serialized object
 |==============================================
+
+.examples of varuint encodings using LEB128
+[width="100%", cols="^3,^3,10", options="header"]
+|==============================================
+| Dezimal | Length |  Binary
+| 1 | 1 | 00000001 
+| 127 | 1 | 01111111
+| 128 | 2 | 10000000  0000001  
+| 16383 | 2 | 11111111  01111111  
+| 16384 | 3 | 10000000  10000000  00000001
+| 32767 | 3 | 11111111  11111111  00000001
+| 65535 | 3 | 11111111  11111111  00000011 
+| 2147483647 | 5 | 11111111  11111111  11111111  11111111  00000111
+| 4294967295 | 5 | 11111111  11111111  11111111  11111111  00001111 
+| 1099511627520 | 6 | 10000000  11111110  11111111  11111111  11111111  00011111  
+| 17592186040320 | 7 | 10000000  11100000  11111111  11111111  11111111  11111111  00000011  
+| 9223372036854775807 | 9 | 11111111  11111111  11111111  11111111  11111111  11111111  11111111  11111111  01111111 
+| 18446744073709551615 | 10 | 11111111  11111111  11111111  11111111  11111111  11111111  11111111  11111111  11111111  00000001
+|==============================================
+
+As you can see from the example encoding table one can expect that most 'ndptr' values
+will be in the size of 1 for the 'vdev' and 4-6 for the offset, so expect an average 
+size of 5-7 byte per pointer. So in contrast to a naive encoding of a full 128bit 
+pointer we only need 30% to 43% of the space which is even less than for a 64bit pointer. 
+
+ TODO: a virtual adress would either not require a varuint or is even one byte smaller. 
+ Also it would make things like defragmentation and sector relocation easy.
 
 [[a:wbo-spec]]
 WBO specification
@@ -246,23 +277,23 @@ In order to alleviate the situation, there are some well defined use cases.
 If a type matches your use case, apply one of the following rules.
 
 Type 1
-++++++
+^^^^^^
 For single file formats (ever a single vdev) always update the ringbuffer. 
 
 Type 2
-++++++
+^^^^^^
 A performance optimized stripe vdev set (like RAID 0) only updates
 the ring buffer in the vdev with the lowest number (typical 0). Stripe sets
 are wobbly anyway. So actually 'Type 1' is only a special case of a stripe set
 with a single vdev.
 
 Type 3
-++++++
+^^^^^^
 For redundant vdevs (like mirrors / RAID 1 / RAID 5) always update the ringbuffer
 in every vdev.
 
 Type 4
-++++++
+^^^^^^
 For WORM / append-only formats only write a new super node to the added vdev
 and never change an already written file.
 
@@ -275,9 +306,9 @@ The wiz repository (as defined by the file) may include different properties.
 These properties are important to open the repository properly, e.g. picking 
 the correct hash algorithm. The hash algorithm has a fixed length, but not a fixed
 algorithm. However the algorithm configured is valid for the entire vdev set
-and must not change between vdevs. The configuration also may contain persistent 
-optional settings for tweaking, which are represented in the wbo. 
-This node directly follows the magic node.
+and must not change between vdevs. It will be used for all hashed data structures.
+The configuration also may contain persistent optional settings for tweaking, 
+which are represented in the wbo. This node directly follows the magic node.
 
 .on-disk format of the configuration node
 [width="100%", cols="3,^3,^3,^3,^3,10", options="header"]
@@ -346,14 +377,28 @@ or the raw device to optimize performance.
 | Offset| Size | Type | Name | Value | Description
 | 0x00 |1 |uint8 | node type | 0x02 | type 'super'
 | 0x01 |1 |uint8 | size | * | # entries in ring buffer as 'n'
-| 0x02 |'n' * ?|[]tx-node| array|*|ring buffer of 'n' transaction nodes
+| 0x02 |'n' * sizeof(tx-node)|[]tx-node| array|*|ring buffer of 'n' transaction nodes
 |==============================================
 
 [[a:transaction-node]]
 Transaction node
 ~~~~~~~~~~~~~~~~
 The transaction node is the entry point which defines an applied transaction
-and all references to nodes which describe the valid state of the storage. This
+and all references to nodes which describe the valid state of the entire storage. 
+When applying changes to the storage all changes are made using COW (copy on write)
+techniques. Even a simple delete will cause a write cascade, from a leaf to the
+root, to represent the change. Afterwards the new commit is referenced by a new transaction node.
+As soon as the transaction mode has made it to disk, at least the predecessor still
+points to a valid state, however the pre-predecessor may now point to overwritten
+data, so the possibilities of recovery are limited (comparable to <<zfs-magic>>), due to
+the usage of free areas as referenced by the free tree. Note that a writer may 
+implement various algorithms to lower fragmentation by deferring writes and by prefer
+writing to new areas instead of filling holes. Also a writer may defragment storage
+by rewriting nodes and updating all related 'ndptrs'. However we do not introduce
+another layer of indirection to ease these things, because it will double the amount
+of required in-memory space and doubles the amount of initial I/O to resolve values from
+disk, which slows down initial lookup operations.
+
 includes references to the root nodes for snapshots (equivalent to tags and branches)
 and also to additional trees, holding information about reference counts and deleted
 nodes. The 'transaction id' is found in all other written nodes (TBD) to easily
@@ -363,10 +408,12 @@ when overwriting! snapshots). The id is strict monotonic increasing.
 .on-disk format of the transaction node
 [width="100%", cols="3,^3,^3,^3,^3,10", options="header"]
 |==============================================
-| Offset| Size | Type | Name | Value | Description
-| 0x00 |1 |uint8 | node type | 0x03 | type 'transaction'
-| 0x01 |8|uint64| transaction id|*|increasing number
-| 0x09 |8|ndptr|
+| Order| Size | Type | Name | Value | Description
+| #0 |1 |uint8 | node type | 0x03 | type 'transaction'
+| #1 |8|uint64| transaction id|*|increasing number
+| #2 |16|ndptr| snapshot tree | *| an uncompressed 128 bit node pointer to the branch tree
+| #2 |16|ndptr| free tree | *| an uncompressed 128 bit node pointer to the tree of free areas
+| #2 |16|ndptr| reference count tree | *| an uncompressed 128 bit node pointer to the tree of reference counts
 |==============================================
 
 Chapters can contain sub-sections nested up to three deep.
@@ -463,6 +510,7 @@ The bibliography list is a style of AsciiDoc bulleted list.
 - [[[btrfs-fsync]]] https://btrfs.wiki.kernel.org/index.php/FAQ#Does_Btrfs_have_data.3Dordered_mode_like_Ext3.3F
 - [[[varint]]] https://developers.google.com/protocol-buffers/docs/encoding
 - [[[bson]]] http://bsonspec.org/spec.html
+- [[[zfs-magic]]] https://blogs.oracle.com/ahrens/is-it-magic
 
 [bibliography]
 .Articles
