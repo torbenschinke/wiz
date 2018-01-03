@@ -446,14 +446,6 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_configuration_node">Configuration node</a></li>
 <li><a href="#_super_node">Super node</a></li>
 <li><a href="#a:transaction-node">Transaction node</a></li>
-<li><a href="#X1">Sub-section with Anchor</a></li>
-</ul>
-</li>
-<li><a href="#_the_second_chapter">The Second Chapter</a></li>
-<li><a href="#_the_third_chapter">The Third Chapter</a></li>
-<li><a href="#_example_appendix">Appendix A: Example Appendix</a>
-<ul class="sectlevel2">
-<li><a href="#_appendix_sub_section">Appendix Sub-section</a></li>
 </ul>
 </li>
 <li><a href="#_example_bibliography">Example Bibliography</a></li>
@@ -733,7 +725,7 @@ introduces a significant overhead.
 </tr>
 </table>
 </div>
-<table id="a:table-leb128" class="tableblock frame-all grid-all spread">
+<table class="tableblock frame-all grid-all spread">
 <caption class="title">Table 3. Reserved vdev identifiers</caption>
 <colgroup>
 <col style="width: 23.0769%;">
@@ -1388,15 +1380,15 @@ choice to support faster defragmentation.</p>
 <td class="tableblock halign-center valign-top"><p class="tableblock">uint64</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">transaction id</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">increasing number</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">increasing number. If the id overflows, all preceeding transactions are simply zeroed out, to invalidate them.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">#2</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">16</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">ndptr</p></td>
-<td class="tableblock halign-center valign-top"><p class="tableblock">vtable</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">vtable tree</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">reference to the virtual address table. If the offset (the last 8 byte) are 0x00, no virtual addresses are in use yet (and have never been used).</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">reference to the virtual address table. If the offset (the last 8 byte) are 0x00, no virtual addresses are in use yet (and have never been used) or when disabled.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">#3</p></td>
@@ -1404,7 +1396,7 @@ choice to support faster defragmentation.</p>
 <td class="tableblock halign-center valign-top"><p class="tableblock">ndptr</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">commit tree</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the tree of named commits (tags or branches)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the tree of named commits (tags or branches). If the value is 0x00 there is no tree yet and the storage is empty.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">#4</p></td>
@@ -1412,7 +1404,7 @@ choice to support faster defragmentation.</p>
 <td class="tableblock halign-center valign-top"><p class="tableblock">ndptr</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">free space tree</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the tree of free areas</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the tree of free areas. A value of 0x00 indicates no free space, e.g. when newly created or when disabled.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">#5</p></td>
@@ -1420,135 +1412,46 @@ choice to support faster defragmentation.</p>
 <td class="tableblock halign-center valign-top"><p class="tableblock">ndptr</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">reference count tree</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the tree of reference counts</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the tree of reference counts. A value of 0x00 indicates that there is no reference tree yet, e.g. when newly created or disabled.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">#6</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">ndptr</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">flat checksum tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the tree of checksums for each node. This just keeps simple hash values of each node, to detect corruptions. This is not a hash tree. Is 0x00 if disabled.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#7</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">16</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">ndptr</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">hash tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">an uncompressed 128 bit node pointer to the hash tree. This is a merkle tree e.g. used for blockchain features or other use cases. Is 0x00 when disabled. In contrast to a simple hash of the entire node, it is calculated on the logical content (children hashes) and not any actual pointer values.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#8</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">32</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">hash</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">checksum</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">the hash of fields #0 - #5</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the hash of fields #0 - #7</p></td>
 </tr>
 </tbody>
 </table>
 <div class="paragraph">
-<p>Chapters can contain sub-sections nested up to three deep.
-<sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnote_1" title="View footnote.">1</a>]</sup>
-</p>
-</div>
-<div class="paragraph">
-<p>Chapters can have their own bibliography, glossary and index.</p>
-</div>
-<div class="paragraph">
-<p>And now for something completely different: monkeys, lions and
-tigers (Bengal and Siberian) using the alternative syntax index
-entries.
-
-
-
-Note that multi-entry terms generate separate index entries.</p>
-</div>
-<div class="paragraph">
-<p>Here are a couple of image examples: an <span class="image"><img src="images/smallnew.png" alt="smallnew"></span>
-example inline image followed by an example block image:</p>
+<p>As you can see, the size of a transaction node comes at 121 byte.</p>
 </div>
 <div class="imageblock">
 <div class="content">
-<img src="images/tiger.png" alt="Tiger image">
+<img src="sample2.svg" alt="sample2" width="228" height="300">
 </div>
-<div class="title">Figure 1. Tiger block image</div>
 </div>
-<div class="paragraph">
-<p>Followed by an example table:</p>
-</div>
-<table class="tableblock frame-all grid-all" style="width: 60%;">
-<caption class="title">Table 12. An example table</caption>
-<colgroup>
-<col style="width: 50%;">
-<col style="width: 50%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-left valign-top">Option</th>
-<th class="tableblock halign-left valign-top">Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">-a <em>USER GROUP</em></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Add <em>USER</em> to <em>GROUP</em>.</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">-R <em>GROUP</em></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Disables access to <em>GROUP</em>.</p></td>
-</tr>
-</tbody>
-</table>
-<div class="exampleblock">
-<div class="title">Example 1. An example example</div>
+<div class="imageblock">
 <div class="content">
-<div class="paragraph">
-<p>Lorum ipum&#8230;&#8203;</p>
+<img src="diag-8ac9b322bf3e2e1e7b0df17f6f64d0a6.png" alt="diag 8ac9b322bf3e2e1e7b0df17f6f64d0a6" width="540" height="280">
 </div>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="X1">Sub-section with Anchor</h3>
-<div class="paragraph">
-<p>Sub-section at level 2.</p>
-</div>
-<div class="sect3">
-<h4 id="_chapter_sub_section">Chapter Sub-section</h4>
-<div class="paragraph">
-<p>Sub-section at level 3.</p>
-</div>
-<div class="sect4">
-<h5 id="_chapter_sub_section_2">Chapter Sub-section</h5>
-<div class="paragraph">
-<p>Sub-section at level 4.</p>
-</div>
-<div class="paragraph">
-<p>This is the maximum sub-section depth supported by the distributed
-AsciiDoc configuration.
-<sup class="footnote">[<a id="_footnoteref_2" class="footnote" href="#_footnote_2" title="View footnote.">2</a>]</sup></p>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_the_second_chapter">The Second Chapter</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>An example link to anchor at start of the <a href="#X1">first sub-section</a>.
-</p>
-</div>
-<div class="paragraph">
-<p>An example link to a bibliography entry <a href="#taoup">[taoup]</a>.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_the_third_chapter">The Third Chapter</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Book chapters are at level 1 and can contain sub-sections.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_example_appendix">Appendix A: Example Appendix</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>One or more optional appendixes go here at section level 1.</p>
-</div>
-<div class="sect2">
-<h3 id="_appendix_sub_section">Appendix Sub-section</h3>
-<div class="paragraph">
-<p>Sub-section body.</p>
 </div>
 </div>
 </div>
@@ -1634,19 +1537,10 @@ of AsciiDoc labeled lists.</p>
 </div>
 </div>
 </div>
-<div id="footnotes">
-<hr>
-<div class="footnote" id="_footnote_1">
-<a href="#_footnoteref_1">1</a>. An example footnote.
-</div>
-<div class="footnote" id="_footnote_2">
-<a href="#_footnoteref_2">2</a>. A second example footnote.
-</div>
-</div>
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2018-01-02 19:02:15 CET
+Last updated 2018-01-03 13:58:06 CET
 </div>
 </div>
 </body>

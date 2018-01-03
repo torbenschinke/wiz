@@ -152,7 +152,7 @@ TIP: You can also use virtual addresses when using the reserved 'vdev' id.
 This makes things like defragmentation and sector relocation a lot easier but
 introduces a significant overhead.
 
-[[a:table-leb128]]
+
 .Reserved vdev identifiers
 [width="100%", cols="^3,10", options="header"]
 |==============================================
@@ -424,91 +424,55 @@ The transaction id is a strict monotonic number.
 |==============================================
 | Order| Size | Type | Name | Value | Description
 | #0 |1 |uint8 | node type | 0x03 | type 'transaction'
-| #1 |8|uint64| transaction id|*|increasing number
-| #2 |16|ndptr| vtable | * | reference to the virtual address table. If the offset (the last 8 byte) are 0x00, no virtual addresses are in use yet (and have never been used).
-| #3 |16|ndptr| commit tree | *| an uncompressed 128 bit node pointer to the tree of named commits (tags or branches)
-| #4 |16|ndptr| free space tree | *| an uncompressed 128 bit node pointer to the tree of free areas
-| #5 |16|ndptr| reference count tree | *| an uncompressed 128 bit node pointer to the tree of reference counts
-| #6 |32|hash| checksum |* | the hash of fields #0 - #5
+| #1 |8|uint64| transaction id|*|increasing number. If the id overflows, all preceeding transactions are simply zeroed out, to invalidate them.
+| #2 |16|ndptr| vtable tree | * | reference to the virtual address table. If the offset (the last 8 byte) are 0x00, no virtual addresses are in use yet (and have never been used) or when disabled.
+| #3 |16|ndptr| commit tree | *| an uncompressed 128 bit node pointer to the tree of named commits (tags or branches). If the value is 0x00 there is no tree yet and the storage is empty.
+| #4 |16|ndptr| free space tree | *| an uncompressed 128 bit node pointer to the tree of free areas. A value of 0x00 indicates no free space, e.g. when newly created or when disabled.
+| #5 |16|ndptr| reference count tree | *| an uncompressed 128 bit node pointer to the tree of reference counts. A value of 0x00 indicates that there is no reference tree yet, e.g. when newly created or disabled.
+| #6 |16|ndptr| flat checksum tree | *| an uncompressed 128 bit node pointer to the tree of checksums for each node. This just keeps simple hash values of each node, to detect corruptions. This is not a hash tree. Is 0x00 if disabled.
+| #7 |16|ndptr| hash tree | *| an uncompressed 128 bit node pointer to the hash tree. This is a merkle tree e.g. used for blockchain features or other use cases. Is 0x00 when disabled. In contrast to a simple hash of the entire node, it is calculated on the logical content (children hashes) and not any actual pointer values.
+| #8 |32|hash| checksum |* | the hash of fields #0 - #7
 |==============================================
 
-Chapters can contain sub-sections nested up to three deep.
-footnote:[An example footnote.]
-indexterm:[Example index entry]
-
-Chapters can have their own bibliography, glossary and index.
-
-And now for something completely different: ((monkeys)), lions and
-tigers (Bengal and Siberian) using the alternative syntax index
-entries.
-(((Big cats,Lions)))
-(((Big cats,Tigers,Bengal Tiger)))
-(((Big cats,Tigers,Siberian Tiger)))
-Note that multi-entry terms generate separate index entries.
-
-Here are a couple of image examples: an image:images/smallnew.png[]
-example inline image followed by an example block image:
-
-.Tiger block image
-image::images/tiger.png[Tiger image]
-
-Followed by an example table:
-
-.An example table
-[width="60%",options="header"]
-|==============================================
-| Option          | Description
-| -a 'USER GROUP' | Add 'USER' to 'GROUP'.
-| -R 'GROUP'      | Disables access to 'GROUP'.
-|==============================================
-
-.An example example
-===============================================
-Lorum ipum...
-===============================================
-
-[[X1]]
-Sub-section with Anchor
-~~~~~~~~~~~~~~~~~~~~~~~
-Sub-section at level 2.
-
-Chapter Sub-section
-^^^^^^^^^^^^^^^^^^^
-Sub-section at level 3.
-
-Chapter Sub-section
-+++++++++++++++++++
-Sub-section at level 4.
-
-This is the maximum sub-section depth supported by the distributed
-AsciiDoc configuration.
-footnote:[A second example footnote.]
+As you can see, the size of a transaction node comes at 121 byte. 
 
 
-The Second Chapter
-------------------
-An example link to anchor at start of the <<X1,first sub-section>>.
-indexterm:[Second example index entry]
+["graphviz", "sample2", "svg"]
+---------------------------------------------------------------------
+digraph automata_0 {
+  size ="8.5, 11";
+  node [shape = circle];
+  0 [ style = filled, color=lightgrey ];
+  2 [ shape = doublecircle ];
+  0 -> 2 [ label = "a " ];
+  0 -> 1 [ label = "other " ];
+  1 -> 2 [ label = "a " ];
+  1 -> 1 [ label = "other " ];
+  2 -> 2 [ label = "a " ];
+  2 -> 1 [ label = "other " ];
+  "Machine: a" [ shape = plaintext ];
+}
+---------------------------------------------------------------------
 
-An example link to a bibliography entry <<taoup>>.
-
-
-The Third Chapter
------------------
-Book chapters are at level 1 and can contain sub-sections.
-
-
-:numbered!:
-
-[appendix]
-Example Appendix
-----------------
-One or more optional appendixes go here at section level 1.
-
-Appendix Sub-section
-~~~~~~~~~~~~~~~~~~~
-Sub-section body.
-
+[ditaa]
+....
+                   +-------------+
+                   | Asciidoctor |-------+
+                   |   diagram   |       |
+                   +-------------+       | PNG out
+                       ^                 |
+                       | ditaa in        |
+                       |                 v
+ +--------+   +--------+----+    /---------------\
+ |        | --+ Asciidoctor +--> |               |
+ |  Text  |   +-------------+    |   Beautiful   |
+ |Document|   |   !magic!   |    |    Output     |
+ |     {d}|   |             |    |               |
+ +---+----+   +-------------+    \---------------/
+     :                                   ^
+     |          Lots of work             |
+     +-----------------------------------+
+....
 
 [bibliography]
 Example Bibliography
