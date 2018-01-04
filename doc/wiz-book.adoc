@@ -286,7 +286,7 @@ on the use case it is either unrealistic (linear growing amount of vdevs) or
 even impossible (WORM) to update existing vdevs, hence there is no definitive rule
 here. 
 
-CAUTION: Each application has to define where to write or update 
+TIP: Each application has to define where to write or update 
 the 'super node'.
 
 In order to alleviate the situation, there are some well defined use cases.
@@ -341,7 +341,7 @@ actual size of the magic node and the first physical sector at offset 0x1000.
 However, a writer may decide to ignore that and not to provide any reserved space
 or even provide more sectors.
 
-WARNING: A configuration node should provide some space to allow changes to the 
+TIP: A configuration node should provide some space to allow changes to the 
 'wbo', so that permanent changes are possible without rewriting the entire file.
 
 In general, the configuration node is not intended to be modified on a regular basis,
@@ -410,8 +410,8 @@ data, so the possibilities of recovery are limited (comparable to <<zfs-magic>>)
 the usage of free areas as declared by the 'free space tree'. Note that a writer may 
 implement various algorithms to lower fragmentation by deferring writes and by prefer
 writing to new areas instead of filling holes. Also a writer may defragment storage
-by rewriting nodes and updating all related 'ndptrs', which probably one of the
-most expensive operations. On the other side, keep in mind, that using 
+by rewriting nodes and updating all related 'ndptrs', which is probably one of the
+most expensive operations. On the other side one can use virtual addresses. But keep in mind, that using 
 the reserved 'vdev' for the indirect address table, lookups will double the amount
 of required in-memory space and doubles the amount of initial I/O to resolve values from
 disk, which slows down everything else. Depending on the use case, this may be a good
@@ -435,6 +435,68 @@ The transaction id is a strict monotonic number.
 |==============================================
 
 As you can see, the size of a transaction node comes at 121 byte. 
+
+Node relation overview
+~~~~~~~~~~~~~~~~~~~~~~~
+
+The following <<a:figure-vdevnodes,figure>> illustrates the basic node relations.
+The 'vtable tree', 'free space tree', 'ref count tree', 'flat checksum tree' and
+'hash tree' are all optional. Values of 0x00 in the transaction node signals that
+no such tree has been defined yet. However if a certain tree should be used, is 
+configured through the 'wbo' in the configuration node. The optional trees
+are possibilities to optimize certain use cases but are just bloat for others.
+
+[[a:figure-vdevnodes]]
+.Node order and references within a vdev 
+[ditaa]
+....
+/----------\     /------------\     /-----------\
+|magic node|-----|config node |-----|super node |
+\----------/     \------------/     \-----------/
+                                        |
+             array of transaction nodes |
+                                        v
+                        /----------------\
+                        |transaction node|
+                        \----------------/    
+                         |  |  |  |  |  |
+/----------------\       |  |  |  |  |  |
+|vtable tree node|<------+  |  |  |  |  |
+\----------------/          |  |  |  |  |
+                            |  |  |  |  |
+/----------------\          |  |  |  |  |
+|commit tree node|<---------+  |  |  |  |
+\----------------/             |  |  |  |
+                               |  |  |  |
+/--------------------\         |  |  |  |
+|free space tree node|<--------+  |  |  |
+\--------------------/            |  |  |
+                                  |  |  |
+/-------------------\             |  |  |
+|ref count tree node|<------------+  |  |
+\-------------------/                |  |
+                                     |  |
+/-----------------------\            |  |
+|flat checksum tree node|<-----------+  |
+\-----------------------/               |
+                                        |
+/--------------\                        |
+|hash tree node|<-----------------------+
+\--------------/                  
+....
+
+The 'wbo' configuration options are defined as follows.
+
+.wbo configuration for optional transaction trees
+[width="100%", cols="3,^3,10", options="header"]
+|==============================================
+| Name| Type |  Description
+| vtable_tree | bool| true if 'ndptr' should be virtual, false if they should be direct
+| space_tree | bool|true if freed memory segments are tracked using this tree
+| reference_count_tree | bool | true if nodes should be reference counted
+| flat_checksum_tree | bool | true if nodes are checksumed in a flat way
+| hash_tree| bool| true if nodes are hashed using a merkle tree
+|==============================================
 
 
 ["graphviz", "sample2", "svg"]

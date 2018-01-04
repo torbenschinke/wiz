@@ -446,6 +446,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_configuration_node">Configuration node</a></li>
 <li><a href="#_super_node">Super node</a></li>
 <li><a href="#a:transaction-node">Transaction node</a></li>
+<li><a href="#_node_relation_overview">Node relation overview</a></li>
 </ul>
 </li>
 <li><a href="#_example_bibliography">Example Bibliography</a></li>
@@ -1057,11 +1058,11 @@ on the use case it is either unrealistic (linear growing amount of vdevs) or
 even impossible (WORM) to update existing vdevs, hence there is no definitive rule
 here.</p>
 </div>
-<div class="admonitionblock caution">
+<div class="admonitionblock tip">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-caution" title="Caution"></i>
+<i class="fa icon-tip" title="Tip"></i>
 </td>
 <td class="content">
 Each application has to define where to write or update
@@ -1176,11 +1177,11 @@ actual size of the magic node and the first physical sector at offset 0x1000.
 However, a writer may decide to ignore that and not to provide any reserved space
 or even provide more sectors.</p>
 </div>
-<div class="admonitionblock warning">
+<div class="admonitionblock tip">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
+<i class="fa icon-tip" title="Tip"></i>
 </td>
 <td class="content">
 A configuration node should provide some space to allow changes to the
@@ -1335,8 +1336,8 @@ data, so the possibilities of recovery are limited (comparable to <a href="#zfs-
 the usage of free areas as declared by the <em>free space tree</em>. Note that a writer may
 implement various algorithms to lower fragmentation by deferring writes and by prefer
 writing to new areas instead of filling holes. Also a writer may defragment storage
-by rewriting nodes and updating all related <em>ndptrs</em>, which probably one of the
-most expensive operations. On the other side, keep in mind, that using
+by rewriting nodes and updating all related <em>ndptrs</em>, which is probably one of the
+most expensive operations. On the other side one can use virtual addresses. But keep in mind, that using
 the reserved <em>vdev</em> for the indirect address table, lookups will double the amount
 of required in-memory space and doubles the amount of initial I/O to resolve values from
 disk, which slows down everything else. Depending on the use case, this may be a good
@@ -1443,6 +1444,68 @@ choice to support faster defragmentation.</p>
 <div class="paragraph">
 <p>As you can see, the size of a transaction node comes at 121 byte.</p>
 </div>
+</div>
+<div class="sect2">
+<h3 id="_node_relation_overview">Node relation overview</h3>
+<div class="paragraph">
+<p>The following <a href="#a:figure-vdevnodes">figure</a> illustrates the basic node relations.
+The <em>vtable tree</em>, <em>free space tree</em>, <em>ref count tree</em>, <em>flat checksum tree</em> and
+<em>hash tree</em> are all optional. Values of 0x00 in the transaction node signals that
+no such tree has been defined yet. However if a certain tree should be used, is
+configured through the <em>wbo</em> in the configuration node. The optional trees
+are possibilities to optimize certain use cases but are just bloat for others.</p>
+</div>
+<div id="a:figure-vdevnodes" class="imageblock">
+<div class="content">
+<img src="diag-783dd1215c9dd662662199f220f9bd91.png" alt="diag 783dd1215c9dd662662199f220f9bd91" width="530" height="518">
+</div>
+<div class="title">Figure 1. Node order and references within a vdev</div>
+</div>
+<div class="paragraph">
+<p>The <em>wbo</em> configuration options are defined as follows.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 12. wbo configuration for optional transaction trees</caption>
+<colgroup>
+<col style="width: 18.75%;">
+<col style="width: 18.75%;">
+<col style="width: 62.5%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Name</th>
+<th class="tableblock halign-center valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">vtable_tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">bool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">true if <em>ndptr</em> should be virtual, false if they should be direct</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">space_tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock"> bool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">true if freed memory segments are tracked using this tree</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">reference_count_tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">bool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"> true if nodes should be reference counted</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">flat_checksum_tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">bool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">true if nodes are checksumed in a flat way</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">hash_tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">bool</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">true if nodes are hashed using a merkle tree</p></td>
+</tr>
+</tbody>
+</table>
 <div class="imageblock">
 <div class="content">
 <img src="sample2.svg" alt="sample2" width="228" height="300">
@@ -1540,7 +1603,7 @@ of AsciiDoc labeled lists.</p>
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2018-01-03 13:58:06 CET
+Last updated 2018-01-04 13:11:49 CET
 </div>
 </div>
 </body>
