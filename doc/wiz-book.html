@@ -446,7 +446,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_configuration_node">Configuration node</a></li>
 <li><a href="#_super_node">Super node</a></li>
 <li><a href="#a:transaction-node">Transaction node</a></li>
-<li><a href="#_node_relation_overview">Node relation overview</a></li>
+<li><a href="#_commit_node">Commit node</a></li>
 </ul>
 </li>
 <li><a href="#_example_bibliography">Example Bibliography</a></li>
@@ -1444,9 +1444,8 @@ choice to support faster defragmentation.</p>
 <div class="paragraph">
 <p>As you can see, the size of a transaction node comes at 121 byte.</p>
 </div>
-</div>
-<div class="sect2">
-<h3 id="_node_relation_overview">Node relation overview</h3>
+<div class="sect3">
+<h4 id="_node_relation_overview">Node relation overview</h4>
 <div class="paragraph">
 <p>The following <a href="#a:figure-vdevnodes">figure</a> illustrates the basic node relations.
 The <em>vtable tree</em>, <em>free space tree</em>, <em>ref count tree</em>, <em>flat checksum tree</em> and
@@ -1486,13 +1485,13 @@ are possibilities to optimize certain use cases but are just bloat for others.</
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">space_tree</p></td>
-<td class="tableblock halign-center valign-top"><p class="tableblock"> bool</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">bool</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">true if freed memory segments are tracked using this tree</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">reference_count_tree</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">bool</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"> true if nodes should be reference counted</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">true if nodes should be reference counted</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">flat_checksum_tree</p></td>
@@ -1506,6 +1505,99 @@ are possibilities to optimize certain use cases but are just bloat for others.</
 </tr>
 </tbody>
 </table>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_commit_node">Commit node</h3>
+<div class="paragraph">
+<p>A commit incorporates a bunch of parent commits, a list of named trees,
+a message and a unix timestamp. The most important thing is that it does never
+contain pointers but the hashed values of the trees and parents.
+When calculating the hash of a node it should be always prefixed (e.g. type) and
+postfixed (e.g. length) as it is done by e.g. git and recommended by the Sakura hash tree
+mode (see <a href="#sakura">[sakura]</a>) to create a strong hash tree and to form a merkle tree.</p>
+</div>
+<div class="paragraph">
+<p>Note that depending on the chosen data and stream nodes are not hashed
+directly and therefore are not part of the merkle tree. This is an explicit design
+decision to give writers the freedom to distribute data nodes at will to e.g.
+improve copy-on-write efficiency or e.g. remote delta updates by desired redundancy in
+different pack files.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 13. on-disk format of the commit node</caption>
+<colgroup>
+<col style="width: 8%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 16%;">
+<col style="width: 12%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Order</th>
+<th class="tableblock halign-center valign-top">Size</th>
+<th class="tableblock halign-center valign-top">Type</th>
+<th class="tableblock halign-center valign-top">Name</th>
+<th class="tableblock halign-center valign-top">Value</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#0</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">uint8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">node type</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x04</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">type <em>commit</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">int64</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">timestamp</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">milliseconds since epoch. This is considered as a hint for humans, not for the system. Timed order is defined by referring to parent commits.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#2</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1-*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">varuint</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">len</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Length of the message array in bytes as <em>len</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#3</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock"><em>len</em></p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">[]uint8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">message</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">byte array containing a message payload. The format of this message is part of the application&#8217;s domain and not specified, e.g. it may just be an utf8 string.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#4</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1-*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">varuint</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">count</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Amount of trees in this commit as count</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#5</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock"><em>count</em>*([]uint8 + hash)</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">[]named tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">trees</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">sorted list of trees, each with a byte array as name, followed by it&#8217;s hash.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>TODO: separate merkle tree in the transaction seems not to make sense.</p>
+</div>
 <div class="imageblock">
 <div class="content">
 <img src="sample2.svg" alt="sample2" width="228" height="300">
@@ -1551,6 +1643,9 @@ ISBN 1-56592-580-7.</p>
 </li>
 <li>
 <p><a id="zfs-magic"></a>[zfs-magic] <a href="https://blogs.oracle.com/ahrens/is-it-magic" class="bare">https://blogs.oracle.com/ahrens/is-it-magic</a></p>
+</li>
+<li>
+<p><a id="sakura"></a>[sakura] <a href="https://keccak.team/files/Sakura.pdf" class="bare">https://keccak.team/files/Sakura.pdf</a></p>
 </li>
 </ul>
 </div>
@@ -1603,7 +1698,7 @@ of AsciiDoc labeled lists.</p>
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2018-01-04 13:11:49 CET
+Last updated 2018-01-05 11:57:40 CET
 </div>
 </div>
 </body>
