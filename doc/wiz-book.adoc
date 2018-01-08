@@ -365,7 +365,8 @@ The super node is a ring buffer having a variable amount of <<a:transaction-node
 which are written in a round-robin manner. The minimum valid capacity is 1 and the maximum
 amount if 255. The larger the ring buffer, the more possiblities to recover older states
 are available. Consider e.g. a capacity of 128 for single file formats, but 1
-when appending only new vdevs. The transaction node with the highest transaction
+when appending only new immutable vdevs. Otherwise provide at least the space for 2 nodes.
+The transaction node with the highest transaction
 id and a valid checksum is the transaction node to use. If something went wrong,
 older transactions may be used for recovery, but the usefulness depends on the kind
 of damage. Usually one would expect that if the transaction is written to the
@@ -434,7 +435,10 @@ The transaction id is a strict monotonic number.
 | #8 |32|hash| checksum |* | the hash of fields #0 - #7
 |==============================================
 
-As you can see, the size of a transaction node comes at 121 byte. 
+As you can see, the size of a transaction node comes at 121 byte. This size needs not to be 
+discussed because the amount of transaction nodes is constant and the minimal size should
+be 2 anyway. In a perfect world, this will protect us when we get interrupted while
+writing the transaction. There
 
 Node relation overview
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -508,7 +512,7 @@ When calculating the hash of a node it should be always prefixed (e.g. type) and
 postfixed (e.g. length) as it is done by e.g. git and recommended by the Sakura hash tree 
 mode (see <<sakura>>) to create a strong hash tree and to form a merkle tree.
 
-Note that depending on the chosen data and stream nodes are not hashed 
+Note that depending on the chosen data, stream nodes are not hashed 
 directly and therefore are not part of the merkle tree. This is an explicit design 
 decision to give writers the freedom to distribute data nodes at will to e.g. 
 improve copy-on-write efficiency or e.g. remote delta updates by desired redundancy in 
@@ -521,12 +525,34 @@ different pack files.
 | #0 |1 |uint8 | node type | 0x04 | type 'commit'
 | #1 |8|int64| timestamp | * | milliseconds since epoch. This is considered as a hint for humans, not for the system. Timed order is defined by referring to parent commits.
 | #2 |1-*|varuint| len | * | Length of the message array in bytes as 'len'
-| #3 |'len' |[]uint8| message | *|  byte array containing a message payload. The format of this message is part of the application's domain and not specified, e.g. it may just be an utf8 string.
+| #3 |'len' |[]uint8| payload | *|  byte array containing a message payload. The format of this message is part of the application's domain and not specified, e.g. it may just be an utf8 string, but also a binary blob.
 | #4 |1-*|varuint|count|*|Amount of trees in this commit as count
-| #5 |'count'*([]uint8 + hash)|[]named tree|trees|*|sorted list of trees, each with a byte array as name, followed by it's hash.
+| #5 |'count'* named tree|[]named tree|trees|*|sorted list of trees, each with a byte array as name, followed by it's hash.
 |==============================================
 
-TODO: separate merkle tree in the transaction seems not to make sense.
+A named tree is just a varuint prefixed byte array as the key, followed by the 32 byte of the
+hash. The key (or name) may be an arbritary byte sequence, but it makes sense to keep it 
+as an UTF8 string.
+
+.on-disk format of a named tree
+[width="100%", cols="2,^3,^3,^4,^3,10", options="header"]
+|==============================================
+| Order| Size | Type | Name | Value | Description
+| #0 |1-*|varuint|count|*|length of the key as 'len'
+| #1 |'len' |[]uint8| payload | *|  the key or name of the following tree
+| #2 |32 |hash| hash of tree | *| the hash of the referenced tree
+|==============================================
+
+In the following some reserved and predefined keys are explained.
+The 'f' or 0x66 is used as the default 'filesystem' anchor.
+The 'r' or 0x72 is used as the default 'relational' anchor, using
+the same hierarchical key/value logic as the filesystem. 
+Relational data is stored in the 'wbo' format without any schema.
+
+
+TODO: separate merkle tree in the transaction seems not to make sense and is not worth the effort.
+
+
 
 ["graphviz", "sample2", "svg"]
 ---------------------------------------------------------------------

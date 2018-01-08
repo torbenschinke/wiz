@@ -1231,7 +1231,8 @@ purposes.</p>
 which are written in a round-robin manner. The minimum valid capacity is 1 and the maximum
 amount if 255. The larger the ring buffer, the more possiblities to recover older states
 are available. Consider e.g. a capacity of 128 for single file formats, but 1
-when appending only new vdevs. The transaction node with the highest transaction
+when appending only new immutable vdevs. Otherwise provide at least the space for 2 nodes.
+The transaction node with the highest transaction
 id and a valid checksum is the transaction node to use. If something went wrong,
 older transactions may be used for recovery, but the usefulness depends on the kind
 of damage. Usually one would expect that if the transaction is written to the
@@ -1442,7 +1443,10 @@ choice to support faster defragmentation.</p>
 </tbody>
 </table>
 <div class="paragraph">
-<p>As you can see, the size of a transaction node comes at 121 byte.</p>
+<p>As you can see, the size of a transaction node comes at 121 byte. This size needs not to be
+discussed because the amount of transaction nodes is constant and the minimal size should
+be 2 anyway. In a perfect world, this will protect us when we get interrupted while
+writing the transaction. There</p>
 </div>
 <div class="sect3">
 <h4 id="_node_relation_overview">Node relation overview</h4>
@@ -1518,7 +1522,7 @@ postfixed (e.g. length) as it is done by e.g. git and recommended by the Sakura 
 mode (see <a href="#sakura">[sakura]</a>) to create a strong hash tree and to form a merkle tree.</p>
 </div>
 <div class="paragraph">
-<p>Note that depending on the chosen data and stream nodes are not hashed
+<p>Note that depending on the chosen data, stream nodes are not hashed
 directly and therefore are not part of the merkle tree. This is an explicit design
 decision to give writers the freedom to distribute data nodes at will to e.g.
 improve copy-on-write efficiency or e.g. remote delta updates by desired redundancy in
@@ -1573,9 +1577,9 @@ different pack files.</p>
 <td class="tableblock halign-left valign-top"><p class="tableblock">#3</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock"><em>len</em></p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">[]uint8</p></td>
-<td class="tableblock halign-center valign-top"><p class="tableblock">message</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">payload</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">byte array containing a message payload. The format of this message is part of the application&#8217;s domain and not specified, e.g. it may just be an utf8 string.</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">byte array containing a message payload. The format of this message is part of the application&#8217;s domain and not specified, e.g. it may just be an utf8 string, but also a binary blob.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">#4</p></td>
@@ -1587,7 +1591,7 @@ different pack files.</p>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">#5</p></td>
-<td class="tableblock halign-center valign-top"><p class="tableblock"><em>count</em>*([]uint8 + hash)</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock"><em>count</em>* named tree</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">[]named tree</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">trees</p></td>
 <td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
@@ -1596,7 +1600,66 @@ different pack files.</p>
 </tbody>
 </table>
 <div class="paragraph">
-<p>TODO: separate merkle tree in the transaction seems not to make sense.</p>
+<p>A named tree is just a varuint prefixed byte array as the key, followed by the 32 byte of the
+hash. The key (or name) may be an arbritary byte sequence, but it makes sense to keep it
+as an UTF8 string.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 14. on-disk format of a named tree</caption>
+<colgroup>
+<col style="width: 8%;">
+<col style="width: 12%;">
+<col style="width: 12%;">
+<col style="width: 16%;">
+<col style="width: 12%;">
+<col style="width: 40%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Order</th>
+<th class="tableblock halign-center valign-top">Size</th>
+<th class="tableblock halign-center valign-top">Type</th>
+<th class="tableblock halign-center valign-top">Name</th>
+<th class="tableblock halign-center valign-top">Value</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#0</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1-*</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">varuint</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">count</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">length of the key as <em>len</em></p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock"><em>len</em></p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">[]uint8</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">payload</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the key or name of the following tree</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">#2</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">32</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">hash</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">hash of tree</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">*</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the hash of the referenced tree</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>In the following some reserved and predefined keys are explained.
+The <em>f</em> or 0x66 is used as the default <em>filesystem</em> anchor.
+The <em>r</em> or 0x72 is used as the default <em>relational</em> anchor, using
+the same hierarchical key/value logic as the filesystem.
+Relational data is stored in the <em>wbo</em> format without any schema.</p>
+</div>
+<div class="paragraph">
+<p>TODO: separate merkle tree in the transaction seems not to make sense and is not worth the effort.</p>
 </div>
 <div class="imageblock">
 <div class="content">
@@ -1698,7 +1761,7 @@ of AsciiDoc labeled lists.</p>
 <div id="footer">
 <div id="footer-text">
 Version 1.0<br>
-Last updated 2018-01-05 11:57:40 CET
+Last updated 2018-01-08 21:25:44 CET
 </div>
 </div>
 </body>
