@@ -431,8 +431,8 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <h1>the wiz book</h1>
 <div class="details">
 <span id="author" class="author">Torben Schinke</span><br>
-<span id="revnumber">version 1.0,</span>
-<span id="revdate">2017-12-05</span>
+<span id="revnumber">version 0.1,</span>
+<span id="revdate">2018-02-04</span>
 </div>
 <div id="toc" class="toc">
 <div id="toctitle">Table of Contents</div>
@@ -442,6 +442,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_format_specification">Format specification</a>
 <ul class="sectlevel2">
 <li><a href="#a:wbo-spec">WBO specification</a></li>
+<li><a href="#_record_format">Record format</a></li>
 <li><a href="#_magic_node">Magic node</a></li>
 <li><a href="#_configuration_node">Configuration node</a></li>
 <li><a href="#_super_node">Super node</a></li>
@@ -862,6 +863,86 @@ BSON cannot guarantee that either when increasing the length of a string.</p>
 </table>
 </div>
 <div class="sect2">
+<h3 id="_record_format">Record format</h3>
+<div class="paragraph">
+<p>As already pointed out, the actual format is represented as nodes. However also
+nodes are organized within a higher level structure, named <em>record</em>. Records
+are used to introduce other properties which should be common to all nodes,
+like generic checksums, extra redundancy, encryption or message authentication.
+The first node, the <em>magic node</em>, contains all relevant parameters for the
+record configuration, including the first node itself. The type of a record
+is always the same for the entire <em>vdev-set</em>, and therefore needs not any
+overhead, like headers or size attributes. To avoid the hassle of testing
+only the following combinations must be supported. A records size must be
+one of 2^9 (512) - 2^17 (128k). Records larger than 128 KiB or smaller than 512 byte
+are not allowed. Also sizes with non-power-of-two sizes are not allowed.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 5. Record format type 0</caption>
+<colgroup>
+<col style="width: 30%;">
+<col style="width: 70%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-center valign-top">Order</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">-</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">This is the packed format, and all nodes are simply written behind each other. Not a record at all.</p></td>
+</tr>
+</tbody>
+</table>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 6. Record format type 1</caption>
+<colgroup>
+<col style="width: 30%;">
+<col style="width: 70%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-center valign-top">Order</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A record always starts with a node, but may contain multiple ones. Unused space is referenced by the free space map.</p></td>
+</tr>
+</tbody>
+</table>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 7. Record format type 2</caption>
+<colgroup>
+<col style="width: 30%;">
+<col style="width: 70%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-center valign-top">Order</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">#0</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A record always starts with a node, but may contain multiple ones. Unused space is referenced by the free space map.</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">#1</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">32 byte: A simple cryptographic hash of preceeding 4064 bytes. Using this mode, a reader can detect random corruptions with a high probability. Keep in mind that this can&#8217;t protect against attacks.</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>TBD: encryption, hmac,</p>
+</div>
+</div>
+<div class="sect2">
 <h3 id="_magic_node">Magic node</h3>
 <div class="paragraph">
 <p>Marks a container and must be always the first node of a file and should not
@@ -870,7 +951,7 @@ to be contradictory. Wiz containers can simply be identified using the magic
 bytes <em>[00 03 77 69 7a 63]</em>.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 5. on-disk format of the magic node</caption>
+<caption class="title">Table 8. on-disk format of the magic node</caption>
 <colgroup>
 <col style="width: 12%;">
 <col style="width: 12%;">
@@ -977,7 +1058,7 @@ to minimize collisions. You may also invent your own file extension, but as a ru
 of thumb, you should never rely on it and check the magic node instead.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 6. known sub format identifiers</caption>
+<caption class="title">Table 9. known sub format identifiers</caption>
 <colgroup>
 <col style="width: 30%;">
 <col style="width: 70%;">
@@ -1003,7 +1084,7 @@ of thumb, you should never rely on it and check the magic node instead.</p>
 <p>The encryption formats are defined as follows:</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 7. encryption format identifiers</caption>
+<caption class="title">Table 10. encryption format identifiers</caption>
 <colgroup>
 <col style="width: 30%;">
 <col style="width: 70%;">
@@ -1117,7 +1198,7 @@ The configuration also may contain persistent optional settings for tweaking,
 which are represented in the wbo. This node directly follows the magic node.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 8. on-disk format of the configuration node</caption>
+<caption class="title">Table 11. on-disk format of the configuration node</caption>
 <colgroup>
 <col style="width: 12%;">
 <col style="width: 12%;">
@@ -1197,7 +1278,7 @@ here are intended to be written either at creation time or for recovering or deb
 purposes.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 9. hash algorithm identifiers</caption>
+<caption class="title">Table 12. hash algorithm identifiers</caption>
 <colgroup>
 <col style="width: 30%;">
 <col style="width: 70%;">
@@ -1276,7 +1357,7 @@ or the raw device to optimize performance.
 </table>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 10. on-disk format of the super node</caption>
+<caption class="title">Table 13. on-disk format of the super node</caption>
 <colgroup>
 <col style="width: 12%;">
 <col style="width: 12%;">
@@ -1348,7 +1429,7 @@ choice to support faster defragmentation.</p>
 <p>The transaction id is a strict monotonic number.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 11. on-disk format of the transaction node</caption>
+<caption class="title">Table 14. on-disk format of the transaction node</caption>
 <colgroup>
 <col style="width: 8%;">
 <col style="width: 8%;">
@@ -1468,7 +1549,7 @@ are possibilities to optimize certain use cases but are just bloat for others.</
 <p>The <em>wbo</em> configuration options are defined as follows.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 12. wbo configuration for optional transaction trees</caption>
+<caption class="title">Table 15. wbo configuration for optional transaction trees</caption>
 <colgroup>
 <col style="width: 18.75%;">
 <col style="width: 18.75%;">
@@ -1529,7 +1610,7 @@ improve copy-on-write efficiency or e.g. remote delta updates by desired redunda
 different pack files.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 13. on-disk format of the commit node</caption>
+<caption class="title">Table 16. on-disk format of the commit node</caption>
 <colgroup>
 <col style="width: 8%;">
 <col style="width: 12%;">
@@ -1605,7 +1686,7 @@ hash. The key (or name) may be an arbritary byte sequence, but it makes sense to
 as an UTF8 string.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 14. on-disk format of a named tree</caption>
+<caption class="title">Table 17. on-disk format of a named tree</caption>
 <colgroup>
 <col style="width: 8%;">
 <col style="width: 12%;">
@@ -1658,6 +1739,33 @@ The <em>r</em> or 0x72 is used as the default <em>relational</em> anchor, using
 the same hierarchical key/value logic as the filesystem.
 Relational data is stored in the <em>wbo</em> format without any schema.</p>
 </div>
+<table class="tableblock frame-all grid-all spread">
+<caption class="title">Table 18. known keys for named trees</caption>
+<colgroup>
+<col style="width: 13.3333%;">
+<col style="width: 20%;">
+<col style="width: 66.6667%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-center valign-top">Hex</th>
+<th class="tableblock halign-center valign-top">ASCII</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x66</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">f</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the default filesystem tree</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0x72</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">r</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">the default relational tree</p></td>
+</tr>
+</tbody>
+</table>
 <div class="paragraph">
 <p>TODO: separate merkle tree in the transaction seems not to make sense and is not worth the effort.</p>
 </div>
@@ -1760,8 +1868,8 @@ of AsciiDoc labeled lists.</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 1.0<br>
-Last updated 2018-01-08 21:25:44 CET
+Version 0.1<br>
+Last updated 2018-02-04 19:51:12 CET
 </div>
 </div>
 </body>

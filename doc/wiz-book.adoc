@@ -1,7 +1,7 @@
 the wiz book
 ============
 Torben Schinke
-v1.0, 2017-12-05
+v0.1, 2018-02-04
 :doctype: book
 :source-highlighter: rouge
 :toc:
@@ -198,6 +198,44 @@ BSON cannot guarantee that either when increasing the length of a string.
 | "0x13" field_name varuint type (type content bytes*) | an array with the bytes of the according type to follow. E.g. could be a list of float32 or object.
 | "0x14" field_name object | a field containing another (recursive) object definition
 |==============================================
+
+Record format
+~~~~~~~~~~~~~~
+As already pointed out, the actual format is represented as nodes. However also
+nodes are organized within a higher level structure, named 'record'. Records
+are used to introduce other properties which should be common to all nodes,
+like generic checksums, extra redundancy, encryption or message authentication. 
+The first node, the 'magic node', contains all relevant parameters for the
+record configuration, including the first node itself. The type of a record
+is always the same for the entire 'vdev-set', and therefore needs not any
+overhead, like headers or size attributes. To avoid the hassle of testing
+only the following combinations must be supported. A records size must be
+one of 2^9 (512) - 2^17 (128k). Records larger than 128 KiB or smaller than 512 byte
+are not allowed. Also sizes with non-power-of-two sizes are not allowed.
+
+.Record format type 0
+[width="100%", cols="^3,7", options="header"]
+|==============================================
+|Order | Description
+|-|This is the packed format, and all nodes are simply written behind each other. Not a record at all.
+|==============================================
+
+.Record format type 1
+[width="100%", cols="^3,7", options="header"]
+|==============================================
+|Order | Description
+|0| A record always starts with a node, but may contain multiple ones. Unused space is referenced by the free space map.
+|==============================================
+
+.Record format type 2
+[width="100%", cols="^3,7", options="header"]
+|==============================================
+|Order | Description
+|#0| A record always starts with a node, but may contain multiple ones. Unused space is referenced by the free space map. 
+|#1| 32 byte: A simple cryptographic hash of preceeding 4064 bytes. Using this mode, a reader can detect random corruptions with a high probability. Keep in mind that this can't protect against attacks.
+|==============================================
+
+TBD: encryption, hmac, 
 
 Magic node
 ~~~~~~~~~~
@@ -549,6 +587,13 @@ The 'r' or 0x72 is used as the default 'relational' anchor, using
 the same hierarchical key/value logic as the filesystem. 
 Relational data is stored in the 'wbo' format without any schema.
 
+.known keys for named trees
+[width="100%", cols="^2,^3,10", options="header"]
+|==============================================
+| Hex| ASCII | Description
+| 0x66 |f|the default filesystem tree
+| 0x72 |r|the default relational tree
+|==============================================
 
 TODO: separate merkle tree in the transaction seems not to make sense and is not worth the effort.
 
