@@ -872,74 +872,81 @@ like generic checksums, extra redundancy, encryption or message authentication.
 The first node, the <em>magic node</em>, contains all relevant parameters for the
 record configuration, including the first node itself. The type of a record
 is always the same for the entire <em>vdev-set</em>, and therefore needs not any
-overhead, like headers or size attributes. To avoid the hassle of testing
-only the following combinations must be supported. A records size must be
-one of 2^9 (512) - 2^17 (128k). Records larger than 128 KiB or smaller than 512 byte
-are not allowed. Also sizes with non-power-of-two sizes are not allowed.</p>
+overhead, like headers or size attributes. Currently only records of a fixed
+size of 4096 byte are allowed. This size is used primarily to match today&#8217;s
+physical storage devices which works with 4k sectors. Also a lot of legacy
+filesystems are driven with 4k sectors, so this looks like a good fit.
+Actually there seems to be no real reason to limit the record size, so
+it is a runtime configuration and this specification may be extended in
+the near future. The primary goal of a record is to verify that the contained
+data has not been tampered, either by a machine failure like random bitrots
+or due to a real attacker. Remember that protecting against attackers is only possible
+by using a <em>hmac</em> or similar authentication techniques. An implementation has
+to verify the record before evaluating the contained nodes. An implementation
+should provide recovery methods based on records by at least ignoring the defunct one and
+continue reading the next record. Due to the fixed
+record size but with different overhead, the actual payload size is different from
+type to type. The common property is that each record starts with a node and contains
+at least a valid one. However it is expected to put as many nodes into a record as
+possible to improve space efficiency. The minimal file size of a valid <em>vdev</em> depends
+on the record size and is at least one record.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 5. Record format type 0</caption>
+<caption class="title">Table 5. Record format type 0: This is the fastest and simplest record format.</caption>
 <colgroup>
-<col style="width: 30%;">
-<col style="width: 70%;">
+<col style="width: 23.0769%;">
+<col style="width: 23.0769%;">
+<col style="width: 53.8462%;">
 </colgroup>
 <thead>
 <tr>
 <th class="tableblock halign-center valign-top">Order</th>
-<th class="tableblock halign-left valign-top">Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">-</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">This is the packed format, and all nodes are simply written behind each other. Not a record at all.</p></td>
-</tr>
-</tbody>
-</table>
-<table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 6. Record format type 1</caption>
-<colgroup>
-<col style="width: 30%;">
-<col style="width: 70%;">
-</colgroup>
-<thead>
-<tr>
-<th class="tableblock halign-center valign-top">Order</th>
+<th class="tableblock halign-center valign-top">Size</th>
 <th class="tableblock halign-left valign-top">Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td class="tableblock halign-center valign-top"><p class="tableblock">0</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A record always starts with a node, but may contain multiple ones. Unused space is referenced by the free space map.</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">4098</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The payload</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">4</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">A CRC32 value to detect some simple bit failures</p></td>
 </tr>
 </tbody>
 </table>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 7. Record format type 2</caption>
+<caption class="title">Table 6. Record format type 1: This is a variant with a configurable 256 bit cryptographic hash.</caption>
 <colgroup>
-<col style="width: 30%;">
-<col style="width: 70%;">
+<col style="width: 23.0769%;">
+<col style="width: 23.0769%;">
+<col style="width: 53.8462%;">
 </colgroup>
 <thead>
 <tr>
 <th class="tableblock halign-center valign-top">Order</th>
+<th class="tableblock halign-center valign-top">Size</th>
 <th class="tableblock halign-left valign-top">Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">#0</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">A record always starts with a node, but may contain multiple ones. Unused space is referenced by the free space map.</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">0</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">4064</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The payload</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock">#1</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">32 byte: A simple cryptographic hash of preceeding 4064 bytes. Using this mode, a reader can detect random corruptions with a high probability. Keep in mind that this can&#8217;t protect against attacks.</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">1</p></td>
+<td class="tableblock halign-center valign-top"><p class="tableblock">32</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">The configured hash of 256 bit</p></td>
 </tr>
 </tbody>
 </table>
 <div class="paragraph">
-<p>TBD: encryption, hmac,</p>
+<p>TBD: encryption, hmac, reed solomon</p>
 </div>
 </div>
 <div class="sect2">
@@ -951,7 +958,7 @@ to be contradictory. Wiz containers can simply be identified using the magic
 bytes <em>[00 03 77 69 7a 63]</em>.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 8. on-disk format of the magic node</caption>
+<caption class="title">Table 7. on-disk format of the magic node</caption>
 <colgroup>
 <col style="width: 12%;">
 <col style="width: 12%;">
@@ -1058,7 +1065,7 @@ to minimize collisions. You may also invent your own file extension, but as a ru
 of thumb, you should never rely on it and check the magic node instead.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 9. known sub format identifiers</caption>
+<caption class="title">Table 8. known sub format identifiers</caption>
 <colgroup>
 <col style="width: 30%;">
 <col style="width: 70%;">
@@ -1084,7 +1091,7 @@ of thumb, you should never rely on it and check the magic node instead.</p>
 <p>The encryption formats are defined as follows:</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 10. encryption format identifiers</caption>
+<caption class="title">Table 9. encryption format identifiers</caption>
 <colgroup>
 <col style="width: 30%;">
 <col style="width: 70%;">
@@ -1198,7 +1205,7 @@ The configuration also may contain persistent optional settings for tweaking,
 which are represented in the wbo. This node directly follows the magic node.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 11. on-disk format of the configuration node</caption>
+<caption class="title">Table 10. on-disk format of the configuration node</caption>
 <colgroup>
 <col style="width: 12%;">
 <col style="width: 12%;">
@@ -1278,7 +1285,7 @@ here are intended to be written either at creation time or for recovering or deb
 purposes.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 12. hash algorithm identifiers</caption>
+<caption class="title">Table 11. hash algorithm identifiers</caption>
 <colgroup>
 <col style="width: 30%;">
 <col style="width: 70%;">
@@ -1357,7 +1364,7 @@ or the raw device to optimize performance.
 </table>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 13. on-disk format of the super node</caption>
+<caption class="title">Table 12. on-disk format of the super node</caption>
 <colgroup>
 <col style="width: 12%;">
 <col style="width: 12%;">
@@ -1429,7 +1436,7 @@ choice to support faster defragmentation.</p>
 <p>The transaction id is a strict monotonic number.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 14. on-disk format of the transaction node</caption>
+<caption class="title">Table 13. on-disk format of the transaction node</caption>
 <colgroup>
 <col style="width: 8%;">
 <col style="width: 8%;">
@@ -1549,7 +1556,7 @@ are possibilities to optimize certain use cases but are just bloat for others.</
 <p>The <em>wbo</em> configuration options are defined as follows.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 15. wbo configuration for optional transaction trees</caption>
+<caption class="title">Table 14. wbo configuration for optional transaction trees</caption>
 <colgroup>
 <col style="width: 18.75%;">
 <col style="width: 18.75%;">
@@ -1610,7 +1617,7 @@ improve copy-on-write efficiency or e.g. remote delta updates by desired redunda
 different pack files.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 16. on-disk format of the commit node</caption>
+<caption class="title">Table 15. on-disk format of the commit node</caption>
 <colgroup>
 <col style="width: 8%;">
 <col style="width: 12%;">
@@ -1686,7 +1693,7 @@ hash. The key (or name) may be an arbritary byte sequence, but it makes sense to
 as an UTF8 string.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 17. on-disk format of a named tree</caption>
+<caption class="title">Table 16. on-disk format of a named tree</caption>
 <colgroup>
 <col style="width: 8%;">
 <col style="width: 12%;">
@@ -1740,7 +1747,7 @@ the same hierarchical key/value logic as the filesystem.
 Relational data is stored in the <em>wbo</em> format without any schema.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
-<caption class="title">Table 18. known keys for named trees</caption>
+<caption class="title">Table 17. known keys for named trees</caption>
 <colgroup>
 <col style="width: 13.3333%;">
 <col style="width: 20%;">
@@ -1869,7 +1876,7 @@ of AsciiDoc labeled lists.</p>
 <div id="footer">
 <div id="footer-text">
 Version 0.1<br>
-Last updated 2018-02-04 19:51:12 CET
+Last updated 2018-02-11 12:27:03 CET
 </div>
 </div>
 </body>

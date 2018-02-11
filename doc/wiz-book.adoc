@@ -208,34 +208,43 @@ like generic checksums, extra redundancy, encryption or message authentication.
 The first node, the 'magic node', contains all relevant parameters for the
 record configuration, including the first node itself. The type of a record
 is always the same for the entire 'vdev-set', and therefore needs not any
-overhead, like headers or size attributes. To avoid the hassle of testing
-only the following combinations must be supported. A records size must be
-one of 2^9 (512) - 2^17 (128k). Records larger than 128 KiB or smaller than 512 byte
-are not allowed. Also sizes with non-power-of-two sizes are not allowed.
+overhead, like headers or size attributes. Currently only records of a fixed
+size of 4096 byte are allowed. This size is used primarily to match today's
+physical storage devices which works with 4k sectors. Also a lot of legacy
+filesystems are driven with 4k sectors, so this looks like a good fit.
+Actually there seems to be no real reason to limit the record size, so
+it is a runtime configuration and this specification may be extended in
+the near future. The primary goal of a record is to verify that the contained
+data has not been tampered, either by a machine failure like random bitrots
+or due to a real attacker. Remember that protecting against attackers is only possible 
+by using a 'hmac' or similar authentication techniques. An implementation has
+to verify the record before evaluating the contained nodes. An implementation
+should provide recovery methods based on records by at least ignoring the defunct one and 
+continue reading the next record. Due to the fixed
+record size but with different overhead, the actual payload size is different from
+type to type. The common property is that each record starts with a node and contains
+at least a valid one. However it is expected to put as many nodes into a record as
+possible to improve space efficiency. The minimal file size of a valid 'vdev' depends
+on the record size and is at least one record.
 
-.Record format type 0
-[width="100%", cols="^3,7", options="header"]
+.Record format type 0: This is the fastest and simplest record format.
+[width="100%", cols="^3,^3,7", options="header"]
 |==============================================
-|Order | Description
-|-|This is the packed format, and all nodes are simply written behind each other. Not a record at all.
-|==============================================
-
-.Record format type 1
-[width="100%", cols="^3,7", options="header"]
-|==============================================
-|Order | Description
-|0| A record always starts with a node, but may contain multiple ones. Unused space is referenced by the free space map.
+|Order | Size | Description
+|0| 4098 |  The payload
+|1| 4 |  A CRC32 value to detect some simple bit failures
 |==============================================
 
-.Record format type 2
-[width="100%", cols="^3,7", options="header"]
+.Record format type 1: This is a variant with a configurable 256 bit cryptographic hash.
+[width="100%", cols="^3,^3,7", options="header"]
 |==============================================
-|Order | Description
-|#0| A record always starts with a node, but may contain multiple ones. Unused space is referenced by the free space map. 
-|#1| 32 byte: A simple cryptographic hash of preceeding 4064 bytes. Using this mode, a reader can detect random corruptions with a high probability. Keep in mind that this can't protect against attacks.
+|Order | Size | Description
+|0| 4064 |  The payload
+|1| 32| The configured hash of 256 bit
 |==============================================
 
-TBD: encryption, hmac, 
+
+TBD: encryption, hmac, reed solomon
 
 Magic node
 ~~~~~~~~~~
